@@ -1,0 +1,931 @@
+/********************************************************************************/
+/** This for-loop controls the number of events per hour per user (EVENTS)     **/
+/** required by the Load Test Specification for this event.                    **/
+/** Sets the random number upper range for i_wait_time as follows:             **/
+/** iMAX = 2*((PERIOD/EVENTS)-EXTIME) where:                                   **/
+/**     PERIOD = target run time in seconds for test. E.g. 3600 for one hour   **/
+/**     EVENTS = number of events per hour per user (EVENTS)                   **/
+/**     EXTIME = execution time in seconds for one event                       **/ 
+/**     iMAX is a positive number rounded up to the next integer value.        **/
+/** Before running check if iMAX is negative. If so, increase (PERIOD).        **/
+/** Set iMIN to the minimum randomly chosen time.                              **/
+/** LoadRunner will then randomly select wait times to scatter event           **/ 
+/** executions for each user over the desired period, e.g. an hour.            **/
+/** Set the number of iterations in Run Time Settings / Pacing to the number   **/
+/** of periods you want the test to run, e.g. 1 for one hour if PERIOD=3600.   **/ 
+/** Set iMIN = 0 if you wish to disable wait time.                             **/   
+/********************************************************************************/
+//#include "as_web.h"
+#include "\\gpspdmqa7\lrunner\include\as_web.h"
+
+const iMIN = 1;
+//const PERIOD = 1800; /* target script (not event) iteration time.  E.g. 3600 for one hour */
+const EVENTS = 1;  /* Events per PERIOD per user from Load Test Specifications */
+const EXTIME = 12; /*execution time in seconds for one event */
+char *thisvuser_group;
+int thisvuser;
+int thisscenario;
+char temp_name[50];
+int j;
+int numICN = 3;		/*number of ICNs per user*/
+int arr_len = -99;
+int bypass=0;
+char timeout;		/*to handle timeout exception */
+char shipdate;		/*to handle bad dates exception */
+char type9;			/*to handle not = type9 exception */
+
+int iMAX;
+
+Action1()
+{
+	int i_wait_time;
+	int i;
+
+	//iMAX = 2*((PERIOD/EVENTS)-EXTIME);
+	iMAX = 2*((GC_PERIOD/EVENTS)-EXTIME);
+
+	lr_output_message("iMAX = %d",iMAX);
+
+  	srand(atoi(lr_eval_string("<p_random_seed>"))); /* seed for random wait time */
+
+	/*controller vuser group and scenario information per present iteration */
+	/*optional enhancement for analysis*/
+	lr_whoami(&thisvuser, &thisvuser_group, &thisscenario);
+	lr_log_message ("INFO: Vuser Group= %s",thisvuser_group);
+	lr_log_message ("INFO: Vuser ID= %d",thisvuser);
+	lr_log_message ("INFO: Scenario ID= %d",thisscenario);
+	lr_log_message ("Iteration= %s",lr_eval_string("<p_iter>"));
+
+	/*following action starts browser at proper URL (env 84) from dat file*/
+	lr_start_transaction("GC_MO_G18_02_Exp_Rel_OTR_Invoke");
+	web_url("epdmLogin.jsp",
+		"URL=<p_url>/espdm/espdmhome/jsp/epdmLogin.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=",
+		"Snapshot=t118.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_02_Exp_Rel_OTR_Invoke",LR_AUTO);
+
+	lr_think_time( 1 );
+
+	lr_log_message("INFO: Will login with username = %s",lr_eval_string("<p_username>"));
+
+	/*
+	 * After Browser is up and connected to ePDM, enter the username and password of the appropriate 
+	 */
+
+	lr_start_transaction("GC_MO_G18_03_Exp_Rel_OTR_Login");
+	web_submit_form("login",
+		"Snapshot=t119.inf",
+		ITEMDATA,
+		"Name=login_name", "Value=<p_username>", ENDITEM,
+		"Name=login_password", "Value=<p_password>", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G18_03_Exp_Rel_OTR_Login", LR_AUTO);
+
+	lr_think_time( 1 );
+
+
+	/*
+	 * Now choose Global Connector from registered applications.
+	 */
+	lr_start_transaction("GC_MO_G18_04_Exp_Rel_OTR_ChooseGC");
+	web_link("Global Connector",
+		"Text=Global Connector",
+		"Snapshot=t301.inf",
+		EXTRARES,
+		"Url=../images/bkd_lgo.gif", ENDITEM,
+		"Url=../images/bs_divider_tp.gif", ENDITEM,
+		"Url=../images/bkd_navBarTop3.png", ENDITEM,
+		"Url=../images/att_small1.gif", ENDITEM,
+		"Url=../images/btn_20_smenclose_d.gif", ENDITEM,
+		"Url=../images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G18_04_Exp_Rel_OTR_ChooseGC", LR_AUTO);
+
+	/*
+	 * the new legal page, accept it
+	 */
+
+	lr_start_transaction("GC_MO_G18_05_Exp_Rel_OTR_Legal");
+	web_submit_form("ControllerServlet",
+		ITEMDATA,
+		EXTRARES,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/dropdown.gif", ENDITEM,
+		"Url=/gc/images/btn_20_user2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+		LAST);
+
+	web_url("GCLayerProfile.jsp",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t302.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_05_Exp_Rel_OTR_Legal", LR_AUTO);
+
+
+	lr_think_time( 1 );
+	/*
+	 * Select User Profile
+	 */
+
+	/*
+	 * Viewing Profile Popup, click Go to set new profile values, confirming prompt
+	 */
+
+	lr_start_transaction("GC_MO_G18_06_Exp_Rel_OTR_edit_profile");
+	web_url("ControllerServlet",
+		"URL=<p_url>/ControllerServlet?Bean=SearchProfile",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_06_Exp_Rel_OTR_edit_profile", LR_AUTO);
+
+	/*
+	 * Viewing available groups and options for session/default
+	 * Select Steam only for default, then Go.
+	 */
+
+	lr_start_transaction("GC_MO_G18_07_Exp_Rel_OTR_new_results");
+
+	web_submit_form("ControllerServlet2",
+		ITEMDATA,
+		"Name=PLSteam", "Value=SteamServices", ENDITEM,
+		"Name=radioSave", "Value=default", ENDITEM,
+		LAST);
+
+	web_url("ControllerServlet3",
+		"URL=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"Mode=HTML",
+		LAST);
+
+	web_url("GCLayerProfile.jsp2",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"Snapshot=t281.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/btn_20_user2.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		LAST);
+
+
+	lr_end_transaction("GC_MO_G18_07_Exp_Rel_OTR_new_results", LR_AUTO);
+
+
+	/*
+	 * Viewing close window popup with GC home refreshed
+	 */
+	/*correlating the ICN listed and ship date in user's quote queue */
+	web_reg_save_param ("p_myICN", "NOTFOUND=EMPTY",  "LB=this.ICN=\"", "RB=\";\r\n", "ORD=All", LAST); 
+	web_reg_save_param("p_ship_date","LB=this.WaDate=\"","RB=\";","Ord=1", "NotFound=EMPTY", LAST);
+
+	/*
+	 * Now go to ITO 'View My Assigned Order Queue'.
+	 */
+	lr_start_transaction("GC_MO_G18_08_Exp_Rel_OTR_Myqueue");
+		web_submit_data("ControllerServlet",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ViewAssignedQ", ENDITEM,
+		"Name=ProcessType", "Value=OTR", ENDITEM,
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/btn_20_action7.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_btm.gif", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+		LAST);
+	web_url("GCLayerProfile.jsp2",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t178.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_08_Exp_Rel_OTR_Myqueue", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	/*
+	 * Now viewing My Queue.
+	 */
+
+	//graceful exit to next action if test data not found for user
+	if(atoi(lr_eval_string("<p_myICN_count>")) == 0)
+		{
+		lr_log_message("INFO: Test data problems (p_myICN_count) for user %s",lr_eval_string("<p_username>"));
+		lr_log_message("iteration was %s",lr_eval_string("<p_iter>"));
+		bypass=1;
+		goto mylogout;
+		}
+	else
+		{
+		//logging captured list of captured ICN
+		lr_log_message("INFO: number of ICN found = %s (need at least 2)",lr_eval_string("<p_myICN_count>"));
+		arr_len = atoi(lr_eval_string("<p_myICN_count>"));
+		for(j=1; j<=arr_len; j++)
+			{
+			sprintf(temp_name,"<p_myICN_%d>",j);
+			lr_log_message("**p_myICN_[%d] = %s.",j, lr_eval_string(temp_name));
+			}
+		}
+
+  	for(i=1; i<=EVENTS; i++)
+  	{
+
+		sprintf(temp_name,"<p_myICN_%d>",i);//hardcoded to take ICN = loop value	
+		lr_save_string(lr_eval_string(temp_name), "p_myICN"); 
+		lr_log_message("INFO: p_myICN loop %d will be from p_myICN_[%d] = %s.",i,i, lr_eval_string("<p_myICN>"));
+
+    	/** [[ Begin randomly set wait times. **/
+
+    	i_wait_time = RandGen(iMIN, iMAX);
+    	lr_output_message("WaitTime = %d",i_wait_time);
+    	
+    	lr_log_message("/****** Vuser reports his status to the Controller. ******/");
+    	lr_save_datetime(TIME_FMT1, DATE_NOW + TIME_NOW, "p_datetime");
+    	lr_save_datetime(TIME_FMT1, i_wait_time, "p_datetime2");
+
+    	lr_vuser_status_message(" Waiting %d secs at %s. ETC: %s. Iter # %d.",
+                                      i_wait_time,
+                                      lr_eval_string("<p_datetime>"),
+                                      lr_eval_string("<p_datetime2>"),
+                                      i);
+    	lr_think_time(i_wait_time); 
+
+    	/** End randomly set wait times. ]] **/
+
+    	
+	/*
+	 * Beginning at My Orders, select M/O for the selected ICN (assumed to be
+	 * the prepared ICN with 1 line unreleased at iter 1, then released for all other iter).
+	 */
+
+	
+	/* correlate the string for ICN-line-part */
+	//build 6 web_reg_save_param ("p_myline", "NOTFOUND=EMPTY", "LB=ID>", "RB=<", "ORD=All", LAST); 
+	//web_reg_save_param ("p_myline", "NOTFOUND=EMPTY", "LB=SelectFlag\>\<ID_Line\>", "RB=<", "ORD=All", LAST); 
+	web_reg_save_param ("p_windowname", "NOTFOUND=EMPTY", "LB=window.name =\"", "RB=\";", "ORD=1", LAST); 
+	web_reg_save_param ("p_icnID", "NOTFOUND=EMPTY", "LB=icnID=", "RB=','AddItem", "ORD=1", LAST); 
+	web_reg_save_param("p_addline_url","NotFound=EMPTY", "LB=2150/", "RB=\";","Ord=1", LAST);
+
+	lr_start_transaction("GC_MO_G18_09_Exp_Rel_OTR_selectICN");
+	web_submit_data("ControllerServlet2",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ViewLine", ENDITEM,  
+		"Name=icn", "Value=<p_myICN>", ENDITEM,
+		"Name=case", "Value=OTR", ENDITEM,
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/btn_20_notes.gif", ENDITEM,
+		"Url=/gc/images/icn_selected.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		LAST);
+	web_url("GCLayerProfile.jsp3",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t179.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_09_Exp_Rel_OTR_selectICN", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	lr_log_message("INFO: window name to be used: %s",lr_eval_string("<p_windowname>"));
+	lr_log_message("INFO: icnID to be used: %s",lr_eval_string("<p_icnID>"));
+	lr_log_message("INFO: addline url to be used: %s",lr_eval_string("<p_addline_url>"));
+
+
+	lr_start_transaction("GC_MO_G18_10_Exp_Rel_OTR_AddLine");
+	web_url("<p_addline_url>",
+		"URL=<p_url>/gc/jsp/genericflow/autoparts/gcaddline.jsp?Target=<p_windowname>&icnID=<p_icnID>",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=",
+		"Snapshot=t7.inf",
+		"Mode=HTML",
+		LAST);
+		//web_url("-126621.6665.4076.30412&icnID=26621.6665.4076.30412",
+	lr_end_transaction("GC_MO_G18_10_Exp_Rel_OTR_AddLine", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	lr_start_transaction("GC_MO_G18_11_Exp_Rel_OTR_Add");
+
+	web_submit_data("ControllerServlet4",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=<p_window_name>",
+		"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcaddline.jsp?Target=<p_windowname>&icnID=<p_icnID>",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ADD", ENDITEM,
+		"Name=tAction", "Value=ADDLINE", ENDITEM,
+		"Name=Target", "Value=<p_windowname>", ENDITEM,
+		"Name=icnID", "Value=<p_icnID>", ENDITEM,
+		"Name=PARTNUMBER", "Value=<p_partnum>", ENDITEM,
+		"Name=QUANTITY", "Value=1", ENDITEM,
+		"Name=MLI", "Value=", ENDITEM,
+		"Name=SHIPDATE", "Value=<p_ship_date>", ENDITEM,
+		"Name=CUSTOMER", "Value=", ENDITEM,
+		"Name=SIMILARTO", "Value=FIRM", ENDITEM,
+		LAST);
+
+	//web_reg_save_param ("p_myline", "NOTFOUND=EMPTY", "LB=SelectFlag\>\<ID_Line\>", "RB=<", "ORD=All", LAST); 
+	web_reg_save_param ("p_mylineplus", "NOTFOUND=EMPTY", "LB=SelectFlag\>\<ID_Line\>", "RB=<", "ORD=1", LAST); 
+
+	web_url("ControllerServlet5",
+		"URL=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		LAST);
+
+	web_url("GCLayerProfile.jsp4",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"Snapshot=t8.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_notes1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/icn_selected1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		LAST);
+
+	lr_end_transaction("GC_MO_G18_11_Exp_Rel_OTR_Add", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	lr_log_message("INFO: new line (mylineplus) to be exploded: %s",lr_eval_string("<p_mylineplus>"));
+	lr_log_message("INFO: part to be exploded: %s",lr_eval_string("<p_partnum>"));
+
+		
+	/*
+	 * Now viewing Material Quote, select the line and the explode button.
+	 */
+	
+	lr_start_transaction("GC_MO_G18_12_Exp_Rel_OTR_SelectLine");
+	web_submit_data("ControllerServlet4",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		//"Referer=<p_url>/ControllerServlet",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Target", "Value=<p_windowname>", ENDITEM,
+		"Name=icnID", "Value=<p_icnID>", ENDITEM,
+		"Name=Bean", "Value=ExplodeLine", ENDITEM,
+		"Name=Mode", "Value=1", ENDITEM,
+		"Name=case", "Value=", ENDITEM,
+		"Name=lineno", "Value=", ENDITEM,
+		"Name=CB", "Value=<p_mylineplus>", ENDITEM,  //		
+		EXTRARES,
+		"Url=/gc/css/commoncss/ge_svctrl_pc_v2.css", ENDITEM,
+		"Url=/gc/css/commoncss/gcstyle.css", ENDITEM,
+		"Url=/gc/script/common/GCValidation.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinks.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinksOTR.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinksOTR.js", ENDITEM,
+		"Url=/gc/script/common/externalLinks.js", ENDITEM,
+		"Url=/gc/images/btn_icn_srchqkfnd.gif", ENDITEM,
+		"Url=/gc/images/btn_20_icn_home_e7e7e7.gif", ENDITEM,
+		"Url=/gc/images/spt_v1_lft_flyout_arrow.gif", ENDITEM,
+		"Url=/gc/images/insidegeps.gif", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/gecom.gif", ENDITEM,
+		"Url=/gc/images/gepower.gif", ENDITEM,
+		"Url=/gc/images/search.gif", ENDITEM,
+		"Url=/gc/images/help.gif", ENDITEM,
+		"Url=/gc/images/btn_20_user.gif", ENDITEM,
+		"Url=/gc/images/ge_icn_nv_bgn.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/btn_20_icn_ie_ge2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_printfriendly.gif", ENDITEM,
+		"Url=/gc/images/btn_20_history2.gif", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/btn_20_userSignIn_0.gif", ENDITEM,
+		"Url=/gc/images/btn_20_notes.gif", ENDITEM,
+		"Url=/gc/images/icn_selected.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		LAST);
+	web_url("ControllerServlet9",
+		"URL=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=",
+		"Mode=HTML",
+		LAST);
+	web_url("gcexpexplodeoptions.jsp",
+		"URL=<p_url>/gc/jsp/genericflow/autoparts/gcexpexplodeoptions.jsp?icnID=<p_icnID>",
+		//"URL=<p_url>/gc/jsp/genericflow/autoparts/gcexpexplodeoptions.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=",
+		"Snapshot=t197.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=template.xsl", "Referer=<p_url>/", ENDITEM,
+		LAST);
+	web_url("GCLayerProfile.jsp4",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"Snapshot=t198.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_12_Exp_Rel_OTR_SelectLine", LR_AUTO);
+
+	lr_think_time( 1 );
+	
+	/*
+	 * popup with 3 options appears for exploding w release or selected or cancel
+	 * browser also redraws
+	 * will click the released option--a null task to LoadRunner
+	 */
+
+	/*
+	 * prompt about orderable child lines will be released, confirm it
+	 */
+
+	lr_start_transaction("GC_MO_G18_13_Exp_Rel_OTR_ExpSel");
+	
+	web_submit_data("ControllerServlet5",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcexpexplodeoptions.jsp?icnID=<p_icnID>",
+		//"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcexpexplodeoptions.jsp",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=icnID", "Value=<p_icnID>", ENDITEM,
+		"Name=Target", "Value=<p_windowname>", ENDITEM,
+		"Name=ExplodeOption", "Value=1", ENDITEM,
+		"Name=Bean", "Value=ExplodeLine", ENDITEM,
+		"Name=Mode", "Value=2", ENDITEM,
+		"Name=Action", "Value=1", ENDITEM,
+		EXTRARES,
+		"Url=/gc/css/commoncss/gcstyle.css", ENDITEM,
+		"Url=/gc/script/common/GCValidation.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinks.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinksOTR.js", ENDITEM,
+		"Url=/gc/script/common/HomeLinksOTR.js", ENDITEM,
+		"Url=/gc/script/common/externalLinks.js", ENDITEM,
+		"Url=/gc/images/btn_icn_srchqkfnd.gif", ENDITEM,
+		"Url=/gc/images/btn_20_icn_home_e7e7e7.gif", ENDITEM,
+		"Url=/gc/images/spt_v1_lft_flyout_arrow.gif", ENDITEM,
+		"Url=/gc/images/insidegeps.gif", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/gecom.gif", ENDITEM,
+		"Url=/gc/images/gepower.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/search.gif", ENDITEM,
+		"Url=/gc/images/help.gif", ENDITEM,
+		"Url=/gc/images/ge_icn_nv_bgn.gif", ENDITEM,
+		"Url=/gc/images/btn_20_user.gif", ENDITEM,
+		"Url=/gc/images/btn_20_printfriendly.gif", ENDITEM,
+		"Url=/gc/images/btn_20_icn_ie_ge2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_history2.gif", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/btn_20_userSignIn_0.gif", ENDITEM,
+		"Url=/gc/images/btn_20_notes.gif", ENDITEM,
+		"Url=/gc/images/icn_selected.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		LAST);
+
+		/*build 7 now finds one child part unreleasable
+		web_url("gcexpnonreleasable.jsp",
+		"URL=<p_url>/gc/jsp/genericflow/autoparts/gcexpnonreleasable.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=",
+		"Snapshot=t280.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=template.xsl", "Referer=<p_url>/", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		LAST);
+		*/
+	web_url("ControllerServlet8",
+		"URL=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		LAST);
+
+	web_url("GCLayerProfile.jsp6",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"Snapshot=t298.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_notes1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/icn_selected1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		LAST);
+
+	lr_end_transaction("GC_MO_G18_13_Exp_Rel_OTR_ExpSel", LR_AUTO);
+	
+	lr_start_transaction("GC_MO_G18_14_Exp_Rel_OTR_ChildConfirm");
+	lr_log_message("release child prompt potentially here--not in build 8");
+	lr_end_transaction("GC_MO_G18_14_Exp_Rel_OTR_ChildConfirm", LR_AUTO);
+
+	/*build 7 releaseable prompt would then appear for one of the child parts
+	 * confirm it
+	 */
+	/*
+	
+	lr_start_transaction("GC_MO_G18_14_Exp_Rel_OTR_ChildConfirm");
+		web_submit_data("ControllerServlet8",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcexpnonreleasable.jsp&icnID=<p_icnID>",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ViewLine", ENDITEM,
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/btn_20_notes1.gif", ENDITEM,
+		"Url=/gc/images/icn_selected1.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		LAST);
+		web_url("GCLayerProfile.jsp8",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", 
+		//"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t283.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G18_14_Exp_Rel_OTR_ChildConfirm", LR_AUTO);
+*/
+
+	lr_think_time( 10 );
+	
+	/*
+	 * explode processed by COPICS, if successful, the next action would be to view the exploded lines
+	 * a good test would check for existence of 4 lines in the list, a change to p_myline_count
+	 */
+
+	/*
+	 * encounter the type9 prompt, will confirm it?
+	 * not anticipated 
+	*/
+	
+	/*
+	 * if succeeded, then viewing a new part on mo page
+	 * now will view history
+	 */
+	web_reg_find("Text=Exploded", "SaveCount=p_exploded_count", LAST); 
+	web_reg_find("Text=Released", "SaveCount=p_released_count", LAST); 
+
+	lr_start_transaction("GC_MO_G18_15_Exp_Rel_OTR_History");
+	web_url("ControllerServlet9",
+		"URL=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>",
+		//"URL=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		//"Referer=<p_url>/ControllerServlet?Bean=ViewLine",
+		"Mode=HTML",
+		LAST);
+	web_url("GCLayerProfile.jsp7",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>",
+		"Snapshot=t265.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bs_divider_btm.gif", "Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G18_15_Exp_Rel_OTR_History", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	if(strcmp(lr_eval_string("<p_exploded_count>"), "0") == 0) 
+		{
+		lr_log_message("INFO: No exploded items in history");
+		bypass=1;
+		goto mylogout;
+		}
+	else
+		{
+		lr_log_message("INFO: Number of exploded items in history = %s", lr_eval_string("<p_exploded_count>"));
+		}
+
+	if(strcmp(lr_eval_string("<p_released_count>"), "0") == 0) 
+		{
+		lr_log_message("INFO: No released items in history");
+		bypass=1;
+		goto mylogout;
+		}
+	else
+		{
+		lr_log_message("INFO: Number of released items in history = %s", lr_eval_string("<p_released_count>"));
+		}
+
+
+	/*
+	 * viewing history, now return via material order link
+	 */
+
+	/*find parent and children then plan to delete the last 2 in list */
+	/*differs from earlier search in that you now want the Tx.0|X at end of number*/
+	web_reg_save_param ("p_lines", "NOTFOUND=EMPTY", "LB=SelectFlag\>\<ID_Line\>", "RB=<", "ORD=All", LAST); 
+
+
+	lr_start_transaction("GC_MO_G18_16_Exp_Rel_OTR_MOreturnlink");
+	web_url("ControllerServlet8",
+		"URL=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=<p_url>/ControllerServlet?Bean=History&case=icnhistory&icnno=<p_myICN>&icnID=<p_icnID>",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		LAST);
+	web_url("GCLayerProfile.jsp8",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR",
+		"Snapshot=t234.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		"Url=/gc/images/btn_20_notes.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		"Url=/gc/images/icn_selected.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G18_16_Exp_Rel_OTR_MOreturnlink", LR_AUTO);
+
+	/* viewing Material Order screen */
+
+	//anticipate 2 lines for the 2 children
+	lr_log_message("Lines to be deleted = %s",lr_eval_string("<p_lines_count>"));
+	arr_len = atoi(lr_eval_string("<p_lines_count>"));
+	for(j=1; j<=arr_len; j++)
+		{
+		sprintf(temp_name,"<p_lines_%d>",j);
+		lr_log_message("INFO: line p_line_[%d] = %s will be deleted.",j, lr_eval_string(temp_name));
+		}
+	/*
+	 * 
+	 * Delete the 2 child parts
+	 */
+
+
+	lr_start_transaction("GC_MO_G18_17_Exp_Rel_OTR_Delete_children");
+
+	web_submit_data("ControllerServlet11",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Target", "Value=<p_windowname>", ENDITEM,
+		"Name=icnID", "Value=<p_icnID>", ENDITEM,
+		"Name=Bean", "Value=Delete", ENDITEM,
+		"Name=Mode", "Value=1", ENDITEM,
+		"Name=case", "Value=", ENDITEM,
+		"Name=lineno", "Value=", ENDITEM,
+		"Name=CB", "Value=<p_lines_1>", ENDITEM,
+		"Name=CB", "Value=<p_lines_2>", ENDITEM,
+		LAST);
+	web_url("ControllerServlet12",
+		"URL=<p_url>/ControllerServlet?Bean=ViewLine",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		LAST);
+
+	web_url("GCLayerProfile.jsp11",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine",
+		"Snapshot=t286.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_notes1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/icn_selected1.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", "Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G18_17_Exp_Rel_OTR_Delete_children", LR_AUTO);
+
+
+	/*
+	 * included a deletion confirmation during transaction
+	 * children are now removed
+	 */
+
+
+	/*
+	* email should be sent, this represents the popup for email (and closing it--a non task for LR)
+	* will be needed after one test cycle on the ICN, since child parts would be released
+	*/
+	j=atoi(lr_eval_string("<p_iter>"));
+	if(j > 2)
+		{
+		lr_log_message("INFO: Closing email popup for released ICN on iteration = %d",j);
+		lr_start_transaction("GC_MO_G18_40_Explode_Release_Email");
+		web_url("gcsendmail.jsp",
+			"URL=<p_url>/gc/jsp/genericflow/autoparts/gcsendmail.jsp",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=",
+			"Snapshot=t235.inf",
+			"Mode=HTML",
+			EXTRARES,
+			"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G18_40_Explode_Release_Email", LR_AUTO);
+		}
+
+	lr_start_transaction("GC_MO_G18_18_Exp_Rel_OTR_backtoqueue");
+
+	web_submit_data("ControllerServlet16",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icnID=<p_icnID>",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ViewAssignedQ", ENDITEM,
+		"Name=ProcessType", "Value=ITO", ENDITEM,
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/btn_20_action7.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_btm.gif", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+		LAST);
+
+	web_url("GCLayerProfile.jsp11",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t321.inf",
+		"Mode=HTML",
+		LAST);
+
+	lr_end_transaction("GC_MO_G18_18_Exp_Rel_OTR_backtoqueue", LR_AUTO);
+
+
+	lr_log_message("INFO: Iteration %s and loop %d had data as follows",lr_eval_string("<p_iter>"),i);
+	lr_log_message("INFO: username was = %s ",lr_eval_string("<p_username>"));
+	lr_log_message("INFO: the ICN was %s",lr_eval_string("<p_myICN>"));
+	lr_log_message("INFO: the exploded line was %s",lr_eval_string("<p_mylineplus>"));
+	lr_log_message("INFO: the deleted lines %s, %s",lr_eval_string("<p_child1>"),lr_eval_string("<p_child2>"));
+	lr_log_message("INFO: the exploded count was %s",lr_eval_string("<p_exploded_count>"));
+	lr_log_message("INFO: the released count was = %s", lr_eval_string("<p_released_count>"));
+	
+
+	} /** end of for-loop. **/
+
+	mylogout:
+	if(bypass==1)
+	{
+	lr_log_message("INFO:MYERR: Iteration %s and loop %d had data as follows",lr_eval_string("<p_iter>"),i);
+	lr_log_message("INFO:MYERR: username was = %s ",lr_eval_string("<p_username>"));
+	lr_log_message("INFO:MYERR: the ICN was %s",lr_eval_string("<p_myICN>"));
+	lr_log_message("INFO:MYERR: the exploded line was %s",lr_eval_string("<p_mylineplus>"));
+	lr_log_message("INFO:MYERR: the deleted lines %s, %s",lr_eval_string("<p_child1>"),lr_eval_string("<p_child2>"));
+	lr_log_message("INFO:MYERR: the exploded count was %s",lr_eval_string("<p_exploded_count>"));
+	lr_log_message("INFO:MYERR: the released count was = %s", lr_eval_string("<p_released_count>"));
+	}
+	lr_think_time( 2 );
+	
+	/*
+	 * From queue, click on logout
+	 */
+
+	lr_start_transaction("GC_MO_G18_19_Exp_Rel_OTR_Logout");
+	
+	web_url("logout",
+		"URL=<p_url>/servlet/logout",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=ViewLine", //build7
+		//build6	"Referer=<p_url>/ControllerServlet?Bean=ViewLine&icn=<p_myICN>&process=OTR",
+		"Snapshot=t267.inf",
+		"Mode=HTML",
+		LAST);
+
+	lr_end_transaction("GC_MO_G18_19_Exp_Rel_OTR_Logout", LR_AUTO);
+
+
+
+
+
+	return 0;
+}

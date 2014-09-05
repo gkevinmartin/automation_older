@@ -1,0 +1,377 @@
+#####################################################################################
+#
+# Title: CTDtool (CCS SCM Configuration Tool for CTD cards)
+#
+# Purpose:  To find changes for a new CCS release.
+#
+#		General structure should be similar to:
+#			Open SPAs 
+#			View CTD cards AA - 46
+#			Verify labels/titles/"static" text on card
+#			verify SPA-specific data on card
+#
+######################################################################################
+static titleanddate;
+static initpath;
+public ENV;		#name of environment: Dev/QA/Prod
+public WHO;		#name of personal work area: KM/LL/LA
+
+ENV="Dev";
+WHO="KM";
+
+###Define paths to scripts#########
+initpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\main_tests\\CCS\\SCM_Tool\\" & WHO & "\\ ";
+toolpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\main_tests\\CCS\\SCM_Tool\\" & WHO & "\\ ";
+tslpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\main_tests\\CCS\\SCM_Tool\\" & WHO & "\\TSL\\ ";
+utilpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\main_tests\\CCS\\SCM_Tool\\" & WHO & "\\TSL\\Utilities\\";
+setvar("searchpath",toolpath & tslpath & utilpath );
+
+#Initialization
+StepName = "Initialize Test";
+if(call_close"Initialize"("C")==""){
+	report_msg("testing in " & TestRegion & " starting at " & UDCstring);
+    report_msg("script uses: " & ENV & " files at " & SCMpath);
+    tl_step(StepName,PASS,"Successfully Initialized");
+	}
+else{
+	tl_step(StepName,FAIL,"Failed to Initialize");
+	texit("Login failed");
+	}
+ 
+setvar("searchpath", toolpath & tslpath & libpath & utilpath);
+   
+#Reload the compiled functions - verification library
+if(reload("VerifyLib")==0){
+	report_msg("functions loaded ok");
+	}
+else{
+	texit("problems loading functions");
+	}
+    
+call_close"Reconnect"();#reconnnects if emulator in "signed off" state
+
+# Login process
+StepName = "Login";
+if(call_close"Login"()==""){
+	tl_step(StepName,PASS,"Successfully Logged Into CCS");
+	}
+else{
+	tl_step(StepName,FAIL,"Failed to Log Into CCS");
+	texit("Login failed");
+	}
+    
+titleanddate=TE_get_text(25,1,80,1); 
+report_msg("starting from " & titleanddate);
+
+#CTD SPA capture Loop  
+# # StepName = "CTD Spas"; #loops through SPAs capturing data
+# # if(call_close"CTDspas"()==""){
+# # 	tl_step(StepName,PASS,"Successfully completed CTD Spas");
+# # 	}
+# # else{
+# # 	tl_step(StepName,FAIL,"Failed to complete CTD Spas");
+# # 	texit("CTD Loop failed at SPA: " & Sys & " " & Prin & " " & Agent);
+# # 	}
+
+#Logout process
+StepName = "Logout";
+if(call_close"Logout"()==""){
+	tl_step(StepName,PASS,"Successfully Logged out of CCS");
+	}
+else{
+	tl_step(StepName,FAIL,"Failed to Log out of CCS");
+	texit("Logout failed");
+	}
+report_msg("end of test");
+
+#CTD compare  
+StepName = "CTDcompare"; #loops through SPAs comparing captured to expected results
+if(call_close"CTDcompare"()==""){
+	tl_step(StepName,PASS,"Successfully completed CTDcompare");
+	}
+else{
+	tl_step(StepName,FAIL,"Failed to complete CTDcompare");
+	texit("CTDcompare failed at SPA: " & Sys & " " & Prin & " " & Agent);
+	}
+
+report_msg("end of CTDtool");
+
+
+
+#####################################################################################
+#
+# Title: CTDcapture(SPA, Card)
+#
+# Purpose:  Captures values row-by-row in 2 regions where codes are typically defined.
+#			Will page down under appropriate conditions and repeat value capture.
+#			Captured data is saved to ax xls file in same folder.
+#			
+######################################################################################
+static nextcard;	#indication to end loop and return to CTDcards
+static rundate;
+static capturedtable;
+static option;		#currently captured value for an option code + description
+static foundtable;	#table name captured on card
+static page;		#which page of card
+static row;			#current row in loop
+static newrows;		#counts new rows added
+static captureinsert;
+static insertvalues;
+static insertquery;
+static CTDcapturecardsession;		#local var for db connect session
+
+call_close"CTDWhichTable"(SPA,Card);#define dataset and Sysmdb
+	
+ConnectString="DSN=MS Access Database;DBQ=" & dbpath & "CTD" & Sysmdb & ".mdb;";
+CTDcapturecardsession="CTDcapturecardsession" & SPA & Card;
+
+#connect to db
+db_connect(CTDcapturecardsession,ConnectString);
+report_msg("MSAccess Connection: " & ConnectString & ", DB Session:" & CTDcapturecardsession);
+
+newrows=1;
+nextcard=0;
+page=1;
+e=1;
+
+    
+while(nextcard==0){#while there is data to capture on current card
+	foundtable=TE_get_text(CtdtableX,CtdtableY,CtdtableX + 1,CtdtableY);
+    if(match(foundtable,Card) < 1 ){#viewing wrong card
+		report_msg("mismatched card" & foundtable);
+        nextcard=1;
+        break; 
+	    }
+	  
+    for(k=5;k<22;k++){#first column of codes
+    	option=TE_get_text(CTDcol1X,k,CTDcol1X + 30,k);
+        if(match(option,"[A-Z]")<1){#if no text found
+        	e++;
+        	if(e>2){
+            	k=22;}#breaking out of loop if values are "empty"
+            }
+        row=(rowcounter + newrows);
+     	captureinsert="INSERT INTO CAPTURED" & dataset & " VALUES ('";
+		insertvalues= SPA & "' , '" & Card & "' , '" & row & "' , '" & option & "',' ','captured','new');";
+		insertquery= captureinsert & insertvalues;
+		db_execute_query(CTDcapturecardsession,insertquery,Recordsfound);
+        newrows++;
+        }
+     for(m=5;m<22;m++){#second column of codes
+    	option=TE_get_text(CTDcol2X,m,CTDcol2X + 30,m);
+        if(match(option,"[A-Z]")<1){#if no text found
+        	e++;
+        	if(e>=2){
+            	m=22;}#breaking out of loop if values are "empty"
+            }
+        row=rowcounter + newrows;
+     	captureinsert="INSERT INTO CAPTURED" & dataset & " VALUES ('";
+		insertvalues= SPA & "' , '" & Card & "' , '" & row & "' , '" & option & "',' ','captured ','new');";
+		insertquery= captureinsert & insertvalues;
+		db_execute_query(CTDcapturecardsession,insertquery,Recordsfound);
+        newrows++;
+		}
+     TE_send_key(TE_PF8);#page down
+	 TE_wait_sync();   
+     
+     moredata=TE_get_text(1,23,50,23);
+     if(match(moredata,"END OF TABLE")>0){
+     	nextcard=1;
+        break; 
+     	}
+     else{
+   		page++;
+        if(page>6){
+	        nextcard=1;
+	        break;
+	        }
+	    }
+}#end of while
+rowcounter=(rowcounter + newrows);   
+	  
+#ddt_save(capturedtable);
+report_msg("captured " & newrows & " next row is " & rowcounter);
+report_msg("captured " & page & " page(s) for " & SPA & " " & Card);
+db_disconnect(CTDcapturecardsession);
+
+
+
+
+#####################################################################################
+#
+# Title: Initialize(Tool)
+#
+# Purpose:  Defines constants, globals and sets key data values for CCS SCM tool, then
+#			sets path variables unique to the SCM tool
+#			loads the relevant GUI file, reloads any compiled functions
+#
+#			Tool should be U,C, or 9 for calling tool: allows unqiue logins per tool
+#
+######################################################################################
+
+
+###GLOBALS############################
+public StepName;   								
+public standardpath;
+public libpath;
+public guipath;
+public tablepath;
+public dbpath;
+public FieldX;	#used as return or found value for TE parameter x coordinate
+public FieldY;	#used as return or found value for TE parameter y coordinate
+public HomeX;	#x coordinate of home position (2)
+public HomeY;	#y coordinate of home position (1)
+public X1;		#top left X for capture (1)
+public Y1;		#top left Y for capture (3)
+public X2;		#bottom right X for capture (80)
+public Y2;		#bottom right Y for capture (24)
+public CtdtableX;		#x position of CTD table entry field
+public CtdtableY;		#y position 
+public CtdSPAX;			#x position of CTD SPA entry field
+public CtdSPAY;			#y position 
+public CTDcol1X;		#x position of CTD first column field
+public CTDcol1Y;		#y position 
+public CTDcol2X;		#x position of CTD second column field
+public CTDcol2Y;		#y position 
+public UDCspaX;			#x position of UDF SPA entry field
+public UDCspaY;			#y position 
+public UDCcrdX;			#x position of UDF Card/table entry field
+public UDCcrdY;			#y position 
+
+public UDCstring;		#holds full string for entering at home and going to Sys,Prin,Agent and Card
+public SCMpath;			#path to SCM folder that holds files used by test
+public debug;
+public TestRegion;
+public Tester;			#Stores NTLoginID used during Login process
+public TestUserName;
+public TestPassword;
+public TestStatus; 		#Stores User's Login status (A or U - Available or Unavailable)
+public Sys;		
+public Prin;	
+public Agent;	
+public Card;	
+public ConnectString;	#connects WR to MDB
+public Recordsfound; 	#the number of rows found by sql query
+public table; 			#Variable used to store Data Table during 3-tiered Login process
+public WhichTable;		#defines which table (Sys, Prin or Agent) should have expected results
+public myquery;			#temporary multipurpose query variable for select sql
+public myselect;		#building clauses of myquery
+public myfrom;			# "
+public mywhere;			# "
+public myorderby;		# "
+public DataFieldsName;	#identifies field(s) on card to be verified, a name for the X1,Y1,X2,Y2 region
+public Expected;		#holds expected results value (string < 255 char) from X1,Y1,X2,Y2 region
+public Captured;		#holds captured results value (string < 255 char) from X1,Y1,X2,Y2 region
+public MoveCTDcaptured;	#defines if CTD captured results are copied to expected (if ==1)
+public rundate;			#date expected results are updated or test is run
+public Xcount;			#verifying good X coordinates
+public Ycount;			#verifying good Y coordinates
+public cellcount;		#verifying good Y,Y region
+public failcount;		#counts number of failures
+public faillimit;		#acceptable number of failures before script exit
+public counter;			#generic loop variable or "dummy" variable for temp use
+public rowcounter;		#maintains current active row of table
+
+public Sysmdb;			#parsed Sys from SPA to pick proper mdb file
+public dataset;			#indicates if the data goes to table A, B, C...I
+
+HomeX=2;
+HomeY=1;
+CtdtableX = 9;
+CtdtableY = 2;
+CtdSPAX=40;
+CtdSPAY=2;
+CTDcol1X=1;		
+CTDcol1Y=5;		 
+CTDcol2X=40;		
+CTDcol2Y=5;		 
+
+UDCspaX=6;
+UDCspaY=2;
+UDCcrdX=26;
+UDCcrdY=2;
+
+MoveCTDcaptured=1;	#0 will not move captured to expected, 1 will move them
+
+TestRegion="tc0y";
+
+#		Direct Login - Alter variables TestUserName, TestPassword & login (direct)
+#		Prompt Login - login (prompt)
+#		Local Login  - login (local)
+#		Shared Login - login (shared)
+
+report_msg("TD values: " & TDLogin & TDUser & TDPass);
+
+if(match(TDLogin,"[a-z]")>0){#login type/name/password is defined in TDScript
+	login=TDLogin;
+	TestUserName=TDUser;
+	TestPassword=TDPass;
+	report_msg("using TD login data: type: " & login & "user: " & TestUserName );
+}
+else{
+	switch(Tool){
+	case "C":
+		TestUserName="KevinM01";
+		TestPassword="kevin";
+		login = "direct"; 
+		debug = "off"; #any value except "on"  will bypass selected verification steps
+	    break;
+	case "9":
+		TestUserName="KevinM01";
+		TestPassword="kevin";
+		login = "direct"; 	
+		debug = "off"; #any value except "on"  will bypass selected verification steps
+		break;
+	case "U":
+	# 	TestUserName="KevinM01";
+	# 	TestPassword="kevin";
+		TestUserName="Lisala01";
+		TestPassword="LML";
+		debug = "off"; #any value except "on"  will bypass selected verification steps
+		login = "direct"; 
+		break;
+	default:
+		pause("no recognized parameter to init");
+	    texit("no recognized initialization parameter");
+	}
+	report_msg("using WR initialize file login data: type: " & login & "user: " & TestUserName );
+
+}
+
+
+
+standardpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\main_tests\\CCS\\SCM_Tool\\" & WHO & "\\ ";
+libpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\lib\\CCS\\SCM_Tool\\" & WHO& "\\ ";
+guipath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\gui_files\\CCS\\SCM_Tool\\" & WHO & "\\";	
+tablepath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\tables\\CCS\\SCM_Tool\\" & WHO & "\\";	
+dbpath="\\\\Phad\\Projects\\Automation\\" & ENV & "\\tables\\CCS\\SCM_Tool\\Baseline\\";	
+
+#for defining alternate xls ddt file path in TestDirector
+if(match(ddtfiles,"[A-Z]")>0){#TestDirector defined a path to ddt files
+	tablepath=ddtfiles;
+    report_msg("TD specified data driven files at: " & tablepath);
+    }
+else{
+	report_msg("data driven files at: " & tablepath);
+	}    
+	
+report_msg("mdb files will be found at: " & dbpath);
+
+SCMpath=standardpath;
+report_msg("testing at: " & ENV & " using TSL from: " & WHO);
+
+GUI_close_all();
+GUI_load(guipath & "CCSRumba.gui");
+
+
+
+
+
+
+
+
+
+
+
+
+

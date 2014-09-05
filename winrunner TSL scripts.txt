@@ -1,0 +1,3243 @@
+##############################################################
+#Test Script Title: capc_v_120
+##############################################################
+#Target application and version: CAP 1.2.0, capc v1.2.0
+#
+#Objectives: Test CAP gui: partner, address, contract, product
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 11-feb-2000
+#
+#scripts called or input data file locations: 
+# technically equivalent to the 1.1.1 tests and adds contract-product
+# 
+#####the spreadsheet rows must be managed so that tests do not use same person
+#
+##############################################################
+
+
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+
+#######################SEARCHING#######################
+
+###203wr_search_one
+#call_close "td124\\a03wr_se"( ); ###carmen, tim, boris
+
+###201wr_search_many
+#call_close  "td37\\a01wr_se"( ); ###kevin, tim, john, louise, carmen, arlene
+
+###202wr_search_none
+#call_close  "td33\\a02wr_se"( ); ###jill and no 'test, schmidt'
+
+
+#######################VIEWING###########################
+
+###204awr_view_postal and covers 204b_view_electronic
+#call_close  "td172\\a04awr_v"("client","1" ); ###Louise
+
+####this is another one with time-dependent issues:  stepping runs better
+###206wr_view_cont_prod
+#call_close "td186\\a06wr_vi"( ); ###Carmen 
+
+####################UPDATING--ADDING DETAILS#####################
+
+###301wr_update_client_person
+#call_close  "td11\\a01wr_up"("client","1"); ###Inka
+
+###304wr_edit_address (edit)
+#call_close  "td138\\a04wr_ed"("client","2"); ###Sarah
+
+###101wr_new_address
+#call_close  "td41\\a01wr_ne"("client","1"); ###Kevin
+
+###304bwr_new_address (replace)
+#call_close  "td144\\a04bwr_n"("client","1"); ###Kevin
+
+###edits not saving??? a buggy part of application
+###303wr_edit_cont_prod
+#call_close  "td163\\a03wr_ed"( ); ### MUST USE CARMEN SCHMIDT
+
+###103wr_new_cont_prod
+###this also is susceptible to replay speeds and may need single step mode
+#call_close  "td69\\a03wr_ne"("client","5" ); ###Zachary
+
+
+####################CREATING##############################
+
+###107wr_prospect_min
+###this may need to be stepped through at the point of saving new prospect###
+#call_close  "td179\\a07wr_pr"("prospect","4" ); ###new heidi mueller+number 
+
+###need to help set window and continue an obj_mouse_drag
+###104wr_client_min
+#call_close  "td135\\a04wr_cl"("client","6"); ###new is Hans Mueller+number
+
+
+##############################################################
+#texit("done");
+report_msg("finished tests for this release");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 201wr_search_many
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1, latest update for CAP 1.2.0
+#
+#Objectives: verify a search feature can return >1 matching partner
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Nov-1999, 25-Nov-99, 24-JAN-2000, 10-feb-2000
+#
+#scripts called or input data file locations: 
+# search(partnerid, lname, fname, birthdate, contractid)
+# for this script, call with string null for unused criteria
+# as example (partnerid, null, null, null, null)
+#
+#script called by and parameters to include:
+# called by many build scripts as td37/a01wr_se
+#related requirements: none for integration testing
+#
+# object checks were commented out for the build script
+# but should work fine if this script is run by itself
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("search many test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+
+######################part 1 is by common last name###############
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","null","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+
+#test steps to view search result and determine if search succeeded
+
+
+set_window("Person", 6);
+#obj_check_gui("Suchergebnis", "list9.ckl", "gui9", 1);
+if (tbl_get_cell_data("Suchergebnis",0,"Vorname", first)==E_OK)
+ if (tbl_get_cell_data("Suchergebnis",1,"Vorname", second)==E_OK)
+  if (tbl_get_cell_data("Suchergebnis",2,"Vorname", third)==E_OK)
+   if (tbl_get_cell_data("Suchergebnis",3,"Vorname", fourth)==E_OK)
+    tl_step("table correct?",0,"multiple names ok");
+   else
+    tl_step("table correct?",1,"multiple names problem");
+report_msg("names include " & first & ", " & second & ", and " & third);
+
+set_window("Person", 0);
+button_press("Zurücksetzen_button");
+win_close("Person");
+
+
+######################part 2 is by wildcard last name###############
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schm%","null","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+#test steps to view search result and determine if search succeeded
+
+#obj_check_gui("Suchergebnis", "list10.ckl", "gui10", 7);
+set_window("Person", 6);
+#obj_check_gui("Suchergebnis", "list9.ckl", "gui9", 1);
+if (tbl_get_cell_data("Suchergebnis",0,"Vorname", first)==E_OK)
+ if (tbl_get_cell_data("Suchergebnis",1,"Vorname", second)==E_OK)
+  if (tbl_get_cell_data("Suchergebnis",2,"Vorname", third)==E_OK)
+   if (tbl_get_cell_data("Suchergebnis",3,"Vorname", fourth)==E_OK)
+    tl_step("table correct?",0,"multiple names ok");
+   else
+    tl_step("table correct?",1,"multiple names problem");
+report_msg("names include " & first & ", " & second & ", and " & third);
+
+
+set_window("Person", 10);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+
+
+######################part 3 is by common birthdate###############
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","s%","null","01.11.1984","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+set_window("Person", 7);
+
+tbl_get_cell_data("Suchergebnis",0,"Geburtsdatum", cell_val1);
+if (cell_val1=="01.11.1984")
+ tl_step("birthdate correct?",0,"correct date");
+else
+ tl_step("birthdate correct?",1,"incorrect date");
+
+tbl_get_cell_data("Suchergebnis",1,"Geburtsdatum", cell_val2);
+if (cell_val2=="01.11.1984")
+ tl_step("birthdate correct?",0,"correct date");
+else
+ tl_step("birthdate correct?",1,"incorrect date");
+
+set_window("Person", 10);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+
+report_msg(cell_val1 & ", " & cell_val2);
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+report_msg("search many test completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 202wr_search_none
+##############################################################
+#Target application and version: CAP 1.0  capc v1.1.1, latest update for 1.2.0
+#
+#Objectives: verify a search feature when no matching results exist
+# may or may not jump to option to allow new partner entry
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Nov-1999  25-Nov-99, 25-JAN-2000, 10-feb-2000
+#
+#scripts called or input data file locations: 
+# search(partnerid, lname, fname, birthdate, contractid)
+# for this script, call with string null for unused criteria
+# as example (partnerid, null, null, null, null)
+#
+#script called by and parameters to include:
+# called by many build scripts as td33/a02wr_se
+#related requirements: none for integration testing
+#
+# commented out the object checks that would not work from build script
+# those checks could be used if this script is run by itself
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("warning.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("search none test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+
+######################bywrong last name first name##########
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","Test","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+wait(5);
+set_window("Search_Warning", 1);
+#obj_check_gui("Keine Personen aufgrund der...", "list3.ckl", "gui3", 1);
+
+obj_get_info("Keine Personen aufgrund der...","label",message);
+if (message=="Keine Personen aufgrund der Suchinformationen gefunden.")
+ tl_step("message correct?",0,"correct message");
+else
+ tl_step("message correct?",1,"incorrect message");
+
+
+set_window("Search_Warning", 11);
+button_press("OK");
+set_window("Person", 3);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+wait(2);
+
+######################by wrong birthdate###############
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","null","12.07.1952","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+wait(5);
+
+set_window("Search_Warning", 4);
+while (obj_exists ("OK") != E_OK) 
+ wait(2);
+
+set_window("Search_Warning", 4);
+button_press("OK");
+ 
+#added to catch mysterious second no results in build playback
+#for (i=1; i<6; i++)
+# {
+# wait (1);
+# if(obj_exists ("OK") == E_OK) button_press("OK");
+# }
+
+set_window("Person", 3);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+
+
+###################### by first name ###############
+###will use wildcard for lastname so that search can run
+###returns a match so that we know search was working
+##############################################################
+#call_close search script 
+call_close "td79\a01_sear"("null","%","Jill","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+wait(2);
+set_window("Person", 10);
+#if (obj_exists ("Suchergebnis") == E_OK)
+# obj_check_gui("Suchergebnis", "list4.ckl", "gui4", 9);
+#else
+# {
+# wait(2);
+# if (obj_exists ("Suchergebnis") == E_OK)
+#  obj_check_gui("Suchergebnis", "list4.ckl", "gui4", 9);
+# else
+#  report_msg("test failed in prior steps");
+# }
+
+tbl_get_cell_data("Suchergebnis",0,"Name", cell_val);
+if (cell_val=="Schmidt")
+ tl_step("table lastname correct?",0,"correct last name");
+else
+ tl_step("table lastname correct?",1,"incorrect last name");
+
+tbl_get_cell_data("Suchergebnis",0,"Vorname", cell_val);
+if (cell_val=="Jill")
+ tl_step("table firstname correct?",0,"correct first name");
+else
+ tl_step("table firstname correct?",1,"incorrect first name");
+
+tbl_get_cell_data("Suchergebnis",0,"Geburtsdatum", cell_val);
+if (cell_val=="19.06.1959")
+ tl_step("birthdate correct?",0,"correct date");
+else
+ tl_step("birthdate correct?",1,"incorrect date");
+
+wait(2);
+set_window("Person", 2);
+button_press("Abbrechen_button");
+
+##############################################################
+call_close "td142\a02_shut"("2"); ## close application from title bar button
+report_msg("search none test completed");
+###end of test
+##############################################################
+
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 203wr_search_one
+##############################################################
+#Target application and version: CAP 1.0 last updated to CAP 1.2.0
+#
+#Objectives: verify a search feature can return a single matching partner
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Nov-1999, 25-Nov-99, 10-FEB-2000
+#
+#scripts called or input data file locations: 
+# search(partnerid, lname, fname, birthdate, contractid)
+# for this script, call with string null for unused criteria
+# as example (partnerid, null, null, null, null)
+#
+#script called by and parameters to include:
+# called by many build scripts as td124/a03wr_se
+#
+#related requirements: none for integration testing
+#
+#
+# commented out the object checks that would not work from build script
+# those checks could be used if this script is run by itself
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#any data refresh actions
+#assumes 20 demonstration (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("search one test begins");
+##############################################################
+
+##capturing some time durations to start application
+start_transaction("start_cap");
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+end_transaction("start_cap");
+
+start_transaction("simple_search");
+###################for a client ###################
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","Carmen","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+end_transaction("simple_search");
+
+set_window("Person", 3);
+tbl_set_selected_row("Suchergebnis", "#0");
+#obj_check_gui("Suchergebnis", "list5.ckl", "gui5", 12);
+
+set_window("Person", 10);
+button_press("Übernehmen_button");
+wait(8);
+
+set_window("CAPC", 11);
+#obj_check_gui("Vorname:", "list6.ckl", "gui6", 1);
+#obj_check_gui("Name:", "list7.ckl", "gui7", 6);
+
+####test for correct first name
+
+obj_get_info("Vorname:","value",fname);
+if (fname=="Carmen")
+ tl_step("firstname correct?",0,"correct first name");
+else
+ tl_step("firstname correct?",1,"incorrect first name");
+
+####test for correct last name
+obj_get_info("Name:","value",lname);
+if (lname=="Schmidt")
+ tl_step("lastname correct?",0,"correct last name");
+else
+ tl_step("lastname correct?",1,"incorrect last name");
+
+set_window("CAPC", 8);
+menu_select_item("Datei;Schliessen");
+
+
+###################for a prospect ###################
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schm%","T%","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+set_window("Person", 7);
+#obj_check_gui("Suchergebnis", "list8.ckl", "gui8", 1);
+
+tbl_get_cell_data("Suchergebnis",0,"Name", cell_val);
+if (cell_val=="Schmidt")
+ tl_step("table lastname correct?",0,"correct last name");
+else
+ tl_step("table lastname correct?",1,"incorrect last name");
+
+tbl_get_cell_data("Suchergebnis",0,"Vorname", cell_val);
+if (cell_val=="Tim")
+ tl_step("table firstname correct?",0,"correct first name");
+else
+ tl_step("table firstname correct?",1,"incorrect first name");
+
+set_window("Person", 16);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+
+###################using a birthdate ###################
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schm%","null","01.11.1984","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+set_window("Person", 7);
+#obj_check_gui("Suchergebnis", "list8.ckl", "gui8", 1);
+
+tbl_get_cell_data("Suchergebnis",0,"Name", cell_val);
+if (cell_val=="Schmidt")
+ tl_step("table lastname correct?",0,"correct last name");
+else
+ tl_step("table lastname correct?",1,"incorrect last name");
+
+tbl_get_cell_data("Suchergebnis",1,"Name", cell_val);
+if (cell_val=="Schmidt")
+ tl_step("table lastname correct?",0,"correct last name");
+else
+ tl_step("table lastname correct?",1,"incorrect last name");
+
+tbl_get_cell_data("Suchergebnis",0,"Geburtsdatum", cell_val);
+if (cell_val=="01.11.1984")
+ tl_step("birthdate correct?",0,"correct date");
+else
+ tl_step("birthdate correct?",1,"incorrect date");
+
+
+set_window("Person", 16);
+button_press("Zurücksetzen_button");
+button_press("Abbrechen_button");
+
+##############################################################
+call_close "td142\a02_shut"("2"); ##close application from menu option
+report_msg("search one test completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+
+##############################################################
+#Test Script Title: 204awr_view_postal
+##############################################################
+#Target application and version: CAP 1.0 capc v1.1.1, cap 1.2.0
+#
+#Objectives: view partner addressing data for postal and electronic  information
+# 204bwr_view_elect is not necessary
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 26-Jan-2000, 10-feb-2000
+#
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_view\client
+#
+#script called by and parameters to include:
+# called by many build scripts as td172/a04awr_v
+# pass in spreadsheet, who
+# related requirements: none for integration testing
+#
+##############################################################
+
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("view postal and electronic address data begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_view\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+##to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "streetno") & ddt_val(table, "city"));
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(5);
+
+###navigate to addressing
+set_window("CAPC", 3);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Louise Schmidt, 1969-10-14, 8564 GL");
+wait(5);
+list_select_item("Tree_Navigate", "TREE_ROOT;Louise Schmidt, 1969-10-14, 8564 GL;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+
+#test steps to view postal address data
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#3");
+button_press("Details");
+
+set_window("AddressingEditor", 0);
+
+obj_get_info("Vorname:","value",user);
+if (user==ddt_val(table, "firstname"))
+ tl_step("firstname correct?",0,"correct first name");
+else
+ tl_step("firstname correct?",1,"incorrect first name");
+
+obj_get_info("Name:","value",user);
+if (user==ddt_val(table, "lastname"))
+ tl_step("lastname correct?",0,"correct last name");
+else
+ tl_step("lastname correct?",1,"incorrect last name");
+
+obj_get_info("Ort:","value",location);
+if (location=="GL")
+ tl_step("correct city?",0,"correct");
+else
+ tl_step("correct city?",1,"incorrect");
+
+obj_get_info("Domizilkanton /","value",canton);
+if(canton=="GLARUS")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if(land=="SCHWEIZ")
+ tl_step("correct country?",0,"correct");
+else
+ tl_step("correct country?",1,"incorrect");
+
+##close details
+set_window("AddressingEditor", 0);
+button_press("OK");
+
+#test steps to view electronic address data
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#4");
+button_press("Details");
+
+set_window("AddressingEditor", 7);
+obj_get_info("Internet-Adresse:","value",location);
+if (location=="www.ubs.com")
+ tl_step("electronic ok?",0,"web url correct");
+else
+ tl_step("electronic ok?",1,"web url incorrect");
+
+###no obvious way to get selection value for testing
+
+##close details
+set_window("AddressingEditor", 7);
+button_press("OK");
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("view address completed");
+###end of test
+##############################################################
+
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 206wr_view_cont_prod
+##############################################################
+#Target application and version: CAP 1.2.0 
+#
+#Objectives: view partner contract and product data
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 11-feb-2000
+#
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+#
+#script called by and parameters to include:
+# called by many build scripts
+#related requirements: none for integration testing
+#
+##############################################################
+
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("view contract product test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null", "Schmidt","Carmen","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+####change the GUI maps for contracts
+GUI_close("CAPC.gui");
+GUI_load("CONTRACTS.gui");
+
+###navigate to addressing
+set_window("CONTRACT", 2);
+list_expand_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG");
+wait(5);
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;PBI8 - GS MEILEN");
+wait(15);
+
+set_window("CONTRACT", 4);
+obj_get_info("Test","value",bank);
+if (bank=="PBI8 - GS MEILEN")
+ tl_step("contact correct?",0,"correct last name");
+else
+ tl_step("contact correct?",1,"incorrect last name");
+
+set_window("CONTRACT", 4);
+obj_get_info("Kundenbetreuer:","value",manager);
+if (manager=="Bill Weiss")
+ tl_step("contact correct?",0,"correct last name");
+else
+ tl_step("contact correct?",1,"incorrect last name");
+
+set_window("CONTRACT", 3);
+#list_select_item("UiJTree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;P8G3 - GS KUESNACHT (ZH)");
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;P8G3 - GS KUESNACHT (ZH)");
+button_press(">");
+wait(2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+
+set_window("CONTRACT", 3);
+obj_get_info("Gerichtsstand:","value",text);
+if (text=="Geneva")
+ tl_step("text correct?",0,"correct");
+else
+ tl_step("text correct?",1,"incorrect");
+
+obj_get_info("Bemerkung:","value",text2);
+if (text2=="Base Acct. Notes-PK206")
+ tl_step("remarks correct?",0,"correct");
+else
+ tl_step("remarks correct?",1,"incorrect");
+
+set_window("CONTRACT", 2);
+list_expand_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;AGB");
+wait(2);
+
+set_window("CONTRACT", 2);
+obj_get_info("Version","value",text3);
+if (text3=="11/72 - V1.0")
+ tl_step("version correct?",0,"correct");
+else
+ tl_step("version correct?",1,"incorrect");
+
+list_get_selected ("type", address, item_num);
+if (address=="Special Conditions for UBS Phonebanking (n.t.)")
+ tl_step("type correct?",0,"correct");
+else
+ tl_step("type correct?",1,"incorrect");
+
+list_get_selected ("Abgabeart:", method, item_num);
+if (method=="Bei Post")
+ tl_step("send method correct?",0,"correct");
+else
+ tl_step("send method correct?",1,"incorrect");
+
+set_window("CONTRACT", 2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;Kontovertrag 1");
+wait(2);
+
+set_window("CONTRACT", 2);
+list_get_selected ("corresp_address", address, item_num);
+if (address=="domicile (n.t.)")
+ tl_step("correspondence correct?",0,"correct");
+else
+ tl_step("correspondence correct?",1,"incorrect");
+
+
+###go back to cap gui
+GUI_close("CONCTRACTS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("view contract product data test completed");
+###end of test
+##############################################################
+
+
+
+BREAK
+
+
+##############################################################
+#Test Script Title: 101wr_new_address
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1 
+#
+#Objectives: create new address data on existing client
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 31-Jan-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_create\client has test data spreadsheet
+#
+#script called by and parameters to include:
+# called by build scripts as td41/a01wr_ne
+#  call with parameters for spreadsheet and who
+# must use Kevin Schmidt to navigate properly through tree
+#
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_create\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+###navigate to addressing
+set_window("CAPC", 4);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI");
+wait(8);
+list_select_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+#select the domicile address for source of new address
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#3");
+button_press("erfassen");
+
+#enter new data from spreadsheet
+set_window("AddressingEditor", 13);
+###edit_set("UIField$3_1", "streetvalue"); ##can not find strasse field
+###the script takes advantage of the 'error' to not require a street value
+edit_set("strasse_no", ddt_val(table, "streetno"));
+edit_set("Postleizahl:", ddt_val(table, "postcode"));
+edit_set("Ort:", ddt_val(table, "city"));
+list_select_item("Domizilkanton /","TESSIN");
+list_select_item("Domizilland:","SCHWEIZ");
+list_select_item("Auswahl", "marketing (n.t.)");
+button_press(">");
+##save the changes
+button_press("OK");
+
+##example to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "streetno") & ddt_val(table, "city"));
+wait(5);
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(5);
+
+#navigate to addressing
+set_window("CAPC", 4);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI");
+wait(5);
+list_select_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+
+#test steps to view new address data
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#6");
+button_press("Details");
+
+####test for correct address city
+set_window("AddressingEditor", 4);
+obj_get_info("Ort:","value",location);
+if (location==ddt_val(table, "city"))
+ tl_step("correct city?",0,"correct");
+else
+ tl_step("correct city?",1,"incorrect");
+
+obj_get_info("Domizilkanton /","value",canton);
+if (canton=="TESSIN")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if (land=="SCHWEIZ")
+ tl_step("correct city?",0,"correct");
+else
+ tl_step("correct city?",1,"incorrect");
+
+
+##close details
+set_window("AddressingEditor", 2);
+button_press("OK");
+
+####test for correct address type
+set_window("CAPC_Address", 4);
+tbl_get_cell_data("addresses_table",6, "Verwendung", addr_type);
+if (addr_type=="marketing (n.t.)")
+ tl_step("correct type?",0,"correct");
+else
+ tl_step("correct type?",1,"incorrect");
+
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("update client data completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 103wr_new_cont_prod
+##############################################################
+#Target application and version: CAP 1.2.0, capc v1.2.0 
+#
+#Objectives: create new contract and product data on existing client
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-feb-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_create\client has test data spreadsheet
+#
+#script called by and parameters to include:
+# called by build scripts as td69/a03wr_ne
+#  call with parameters for spreadsheet and who
+# must use Stephan Schmidt (row 5) to navigate properly through tree
+#
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_create\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+###navigate to addressing
+set_window("CAPC", 4);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Zachary Schmidt, 1994-03-23, 8328 VS");
+wait(8);
+list_select_item("Tree_Navigate", "TREE_ROOT;Zachary Schmidt, 1994-03-23, 8328 VS;TOrganisationUnitID16");
+wait(15);
+
+####change the GUI maps for contracts
+GUI_close("CAPC.gui");
+GUI_load("CONTRACTS.gui");
+
+##example to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "contact") & ddt_val(table, "firstname"));
+
+###create a new account manager from bank
+set_window("CONTRACT", 4);
+edit_set("Kundenbetreuer:", ddt_val(table, "contact"));
+
+set_window("CONTRACT", 5);
+button_press(">");
+
+###create a new contract for a general account
+button_press("Neuer Kontobasisvertrag");
+wait(5);
+
+set_window("Products", 10);
+list_select_item("Produkt", "UBS Kontokorrent Private");
+button_press("OK");
+
+set_window("CONTRACT", 3);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+
+####not sure how or when to enter this contract data
+#set_window("CONTRACT", 7);
+#edit_set("Gültig bis:", "31.12.2002");
+#edit_set("Gerichtsstand:", "testing contract and product");
+#edit_set("Bemerkung:", "remarks from testing");
+
+####Basic account contract data
+set_window("CONTRACT", 3);
+list_expand_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+wait(5);
+set_window("CONTRACT", 3);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;Kontovertrag 1");
+
+set_window("CONTRACT", 3);
+list_select_item("corresp_address","correspondence (n.t.)");
+
+####AGB data
+set_window("CONTRACT", 3);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;AGB");
+
+edit_set("Version", "1.99");
+list_select_item("type","General  (n.t.)");
+list_select_item("Abgabeart:","Bei Post");
+edit_set("Abgabe-Datum:", "31.12.2003");
+
+###save contract and product data
+set_window("CONTRACT", 3);
+button_press("Speichern_1");
+wait(8);
+
+###go back to cap gui
+GUI_close("CONCTRACTS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(5);
+
+#navigate to addressing
+set_window("CAPC", 4);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Zachary Schmidt, 1994-03-23, 8328 VS");
+wait(8);
+list_select_item("Tree_Navigate", "TREE_ROOT;Zachary Schmidt, 1994-03-23, 8328 VS;TOrganisationUnitID16");
+wait(5);
+
+####change the GUI maps for contracts
+GUI_close("CAPC.gui");
+GUI_load("CONTRACTS.gui");
+
+####test for correct data
+
+set_window("CONTRACT", 4);
+obj_get_info("Kundenbetreuer:","value",manager);
+if (manager==ddt_val(table,"contact"))
+ tl_step("contact correct?",0,"correct last name");
+else
+ tl_step("contact correct?",1,"incorrect last name");
+
+set_window("CONTRACT", 5);
+button_press(">");
+wait(2);
+
+set_window("CONTRACT", 2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+
+####data not entered earlier...
+#obj_get_info("Gerichtsstand:","value",text);
+#if (text=="testing contract and product")
+# tl_step("text correct?",0,"correct");
+#else
+# tl_step("text correct?",1,"incorrect");
+
+#obj_get_info("Bemerkung:","value",text2);
+#if (text2=="remarks from testing")
+# tl_step("remarks correct?",0,"correct");
+#else
+# tl_step("remarks correct?",1,"incorrect");
+
+####appear to be unable to bring focus to branch and view the data....
+#set_window("CONTRACT", 2);
+#list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;Kontovertrag 1");
+#wait(2);
+
+#list_get_selected ("corresp_address", address, item_num);
+#if (address=="correspondence (n.t.)")
+# tl_step("correspondence correct?",0,"correct");
+#else
+# tl_step("correspondence correct?",1,"incorrect");
+
+set_window("CONTRACT", 1);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;AGB");
+wait(2);
+
+obj_get_info("Version","value",text3);
+if (text3=="1.99")
+ tl_step("version correct?",0,"correct");
+else
+ tl_step("version correct?",1,"incorrect");
+
+list_get_selected ("type", address, item_num);
+if (address=="General  (n.t.)")
+ tl_step("type correct?",0,"correct");
+else
+ tl_step("type correct?",1,"incorrect");
+
+list_get_selected ("Abgabeart:", method, item_num);
+if (method=="Bei Post")
+ tl_step("send method correct?",0,"correct");
+else
+ tl_step("send method correct?",1,"incorrect");
+
+###go back to cap gui
+GUI_close("CONCTRACTS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("update contract and product data completed");
+###end of test
+##############################################################
+
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 104wr_client_min
+##############################################################
+#Target application and version: CAP 1.2.0 
+#
+#Objectives: create minimum required client data
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 11-feb-2000
+#
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 903_newpartner, 904_unique
+# 900_login, 902_shutdown
+#
+#script called by and parameters to include:
+# called by build scripts as  "td135\\a04wr_cl"
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#variable declarations, compiled functions, other functions
+#####
+ 
+#####
+#any data refresh actions
+#assumes 20 original partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("CAPC.gui");
+GUI_load("search.gui");
+GUI_load("warning.gui");
+GUI_load("OPENNEW.gui");
+#####
+
+##############################################################
+report_msg("create minimum client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_create\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##example to see spreadsheet data working
+report_msg("test prospect will be " & ddt_val(table, "firstname") & ", " & ddt_val(table, "lastname"));
+
+#statement to enter data from spreadsheet
+#set_window ("Person", 9);
+#edit_set ("logicalname", ddt_val(table, "columnname")  );
+
+lastnom=ddt_val(table, "lastname");
+firstnom=ddt_val(table, "firstname");
+
+##############################################################
+#call unique script perhaps in the future to append to lastname? 
+answer=call_close "td115\a04_uniq"( );
+#report_msg("unique value is " & answer); ###use answer value for new lastname
+##############################################################
+
+uniquenom=lastnom&answer;
+report_msg("last name is " & uniquenom);
+
+##############################################################
+#call newperson script 
+call_close "td145\a03_newp"(uniquenom, firstnom, "client" );
+#navigates to point where new person data may be entered (does the search)
+##############################################################
+
+wait(2);
+##steps to see the search names are used for new person
+set_window("CAPC", 4);
+obj_get_info("Vorname:","value",fname);
+if (fname==firstnom)
+ tl_step("firstname search?",0,"correct first name");
+else
+ tl_step("firstnamesearch?",1,"incorrect first name");
+
+obj_get_info("Name:","value",lname);
+if (lname==uniquenom)
+ tl_step("lastname search?",0,"correct last name");
+else
+ tl_step("lastname search?",1,"incorrect last name");
+
+#test steps to create person data
+set_window("CAPC", 10);
+list_select_item("Titel:", "Herr");
+#obj_mouse_drag("title",5,5, 15,75);
+edit_set("Vorname:", firstnom);
+edit_set("Name:", uniquenom);
+edit_set("street", ddt_val(table, "street"));
+edit_set("/", ddt_val(table, "streetno"));
+edit_set("Postleizahl:", ddt_val(table, "postcode"));
+edit_set("Ort:", ddt_val(table, "city"));
+list_select_item("Domizilkanton","GENF");
+list_select_item("Domizilland:","ITALIEN");
+set_window("CAPC", 10);
+obj_mouse_drag("persontype",5,5, 15,75);
+list_select_item("Korrespondenzsprache","Italian (n.t.)");
+####list_select_item("persontype","privatkunde");
+#obj_mouse_drag("Domizilkanton",5,5, 15,75);
+#obj_mouse_drag("Domizilland:", 55, 5, 15,95,LEFT);
+#obj_mouse_drag("Korrespondenzsprache", 55, 5, 15,80);
+
+###go to next tab
+set_window("CAPC", 5);
+button_press("arrow_right");
+
+set_window("CAPC", 5);
+list_select_item("Nationality","ITALIEN");
+#obj_mouse_drag("Nationality", 55, 5, 15,80);
+list_select_item("Geschlecht:","weiblich");
+list_select_item("Zivilstand:","ledig");
+#obj_mouse_drag("Geschlecht:", 55, 5, 15,40);
+#obj_mouse_drag("Zivilstand:", 55, 5, 15,80);
+button_set ("Grenzgänger:", ON);
+edit_set("AHV-Nr:", "123.456.78.911");
+edit_set("Geburtsdatum:", "29.02.1972<Tab>");
+
+###go to next tab
+set_window("CAPC", 5);
+button_press("arrow_right");
+
+set_window("CAPC", 5);
+list_select_item("Ausweisart:","Pass");
+set_window("CAPC", 9);
+edit_set("Ausweisnummer:", "9876543221");
+edit_set("Ausstellungsort:", "testcity");
+edit_set("Ausstellungsdatum:", "31.12.1999");
+edit_set("Erfasser", "testname");
+edit_set("Visum 2.Kontrole", ddt_val(table,"contact"));
+
+###go to next tab
+set_window("CAPC", 5);
+button_press("arrow_left");
+button_press("arrow_left");
+
+
+###can data recognition occur if I can tab to all fields?
+win_resize ("CAPC", 1000, 800);
+win_move ("CAPC", 100, 100);
+win_activate ("CAPC");
+wait (2); 
+set_window("CAPC");
+
+####try analogue?? purpose is to tab to all fields
+move_locator_track (13);
+mtype ("<T260><kLeft>-<T110><kLeft>+");
+move_locator_track (14);
+mtype ("<T351><kLeft>-<T90><kLeft>+");
+
+move_locator_track (1);
+move_locator_track (2);
+mtype ("<T1673><kLeft>-<T130><kLeft>+");
+type ("<t2><kTab><t1><kTab><kTab><kTab><t1><kTab><kTab><kTab>");
+type ("<kTab><kTab><kTab><kTab><kTab><kTab><kTab><t1><kTab>");
+#move_locator_track (3);
+#move_locator_track (4);
+#move_locator_track (5);
+#mtype ("<T241><kLeft>-<T80><kLeft>+");
+set_window("CAPC", 3);
+button_press("arrow_right");
+wait(2);
+#move_locator_track (6);
+#mtype ("<T181><kLeft>-<T80><kLeft>+");
+move_locator_track (7);
+type ("<t1><kTab><kTab><kTab><kTab><kTab><kTab><kTab><kTab>");
+type ("<t1><kTab>");
+#move_locator_track (8);
+#mtype ("<T60><kLeft>-<T101><kLeft>+");
+set_window("CAPC", 3);
+button_press("arrow_right");
+wait(2);
+#move_locator_track (9);
+#mtype ("<T220><kLeft>-");
+move_locator_track (10);
+mtype ("<T20><kLeft>+");
+type ("<t1><kTab><kTab><kTab><kTab><kTab><kTab><kTab>");
+#move_locator_track (11);
+#move_locator_track (12);
+#mtype ("<T190><kLeft>-<T120><kLeft>+");
+###end this analog tabbing experiment here
+
+
+set_window("CAPC", 5);
+button_press("Save");
+
+###close person
+wait(8);
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",uniquenom, ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+#test steps to view data
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+
+set_window("CAPC", 4);
+
+####test for correct first name
+obj_get_info("Vorname:","value",user);
+if (user==ddt_val(table, "firstname"))
+ tl_step("firstname correct?",0,"correct first name");
+else
+ tl_step("firstname correct?",1,"incorrect first name");
+
+
+####test for correct last name
+obj_get_info("Name:","value",user);
+if (user==uniquenom)
+ tl_step("lastname correct?",0,"correct last name");
+else
+ tl_step("lastname correct?",1,"incorrect last name");
+
+obj_get_info("Domizilkanton","value",canton);
+if(canton=="GENF")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if(land=="ITALIEN")
+ tl_step("correct country?",0,"correct");
+else
+ tl_step("correct country?",1,"incorrect");
+
+set_window("CAPC", 5);
+button_press("arrow_right");
+
+set_window("CAPC", 5);
+obj_get_info("Nationality","value",citizen);
+if(citizen=="ITALIEN")
+ tl_step("correct nationality?",0,"correct");
+else
+ tl_step("correct nationality?",1,"incorrect");
+
+button_get_state ("Grenzgänger:", checked);
+if(checked=="1")
+ tl_step("border commuter?",0,"correct");
+else
+ tl_step("border commuter?",1,"incorrect");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("create minimum client test completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 107wr_prospect_min
+##############################################################
+#Target application and version: CAP 1.2.0, capc v1.2.0 
+#
+#Objectives: create minimum required prospect data (like in demo)
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Feb-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 903_newpartner, 904_unique
+# 900_login, 902_shutdown
+#
+#
+#script called by and parameters to include:
+# called by build scripts as "td179\\a07wr_pr"
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#variable declarations, compiled functions, other functions
+#####
+ 
+#####
+#any data refresh actions
+#assumes 20 original partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("CAPC.gui");
+GUI_load("search.gui");
+GUI_load("warning.gui");
+GUI_load("OPENNEW.gui");
+#####
+
+##############################################################
+report_msg("create new minimum prospect test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_create\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##example to see spreadsheet data working
+report_msg("test prospect will be " & ddt_val(table, "firstname") & ", " & ddt_val(table, "lastname"));
+
+#statement to enter data from spreadsheet
+#set_window ("Person", 9);
+#edit_set ("logicalname", ddt_val(table, "columnname")  );
+
+lastnom=ddt_val(table, "lastname");
+firstnom=ddt_val(table, "firstname");
+
+##############################################################
+#call unique script perhaps in the future to append to lastname? 
+answer=call_close "td115\a04_uniq"( );
+#report_msg("unique value is " & answer); ###use answer value for new lastname
+##############################################################
+
+uniquenom=lastnom&answer;
+report_msg("last name is " & uniquenom);
+
+##############################################################
+#call newperson script 
+call_close "td145\a03_newp"(uniquenom, firstnom, "prospect" );
+#navigates to point where new person data may be entered (does the search)
+##############################################################
+
+wait(2);
+##steps to see the search names are used for new person
+set_window("CAPC", 4);
+obj_get_info("Vorname:","value",fname);
+if (fname==firstnom)
+ tl_step("firstname search?",0,"correct first name");
+else
+ tl_step("firstnamesearch?",1,"incorrect first name");
+
+obj_get_info("Name:","value",lname);
+if (lname==uniquenom)
+ tl_step("lastname search?",0,"correct last name");
+else
+ tl_step("lastname search?",1,"incorrect last name");
+
+#test steps to create minimum prospect data
+set_window("CAPC", 10);
+list_select_item("title", "Herr");
+#obj_mouse_drag("title",5,5, 15,75);
+edit_set("Vorname:", firstnom);
+edit_set("Name:", uniquenom);
+edit_set("strasse", ddt_val(table, "street"));
+edit_set("/", ddt_val(table, "streetno"));
+edit_set("Postleizahl:", ddt_val(table, "postcode"));
+edit_set("Ort:", ddt_val(table, "city"));
+list_select_item("Domizilkanton","GENF");
+list_select_item("Domizilland:","ITALIEN");
+list_select_item("Korrespondenzsprache","Italian (n.t.)");
+#obj_mouse_drag("Domizilkanton",5,5, 15,75);
+#obj_mouse_drag("Domizilland:", 55, 5, 15,95,LEFT);
+#obj_mouse_drag("Korrespondenzsprache", 55, 5, 15,80);
+
+###go to next tab
+set_window("CAPC", 5);
+button_press("arrow_right");
+
+set_window("CAPC", 5);
+list_select_item("Nationality","ITALIEN");
+#obj_mouse_drag("Nationality", 55, 5, 15,80);
+list_select_item("Geschlecht:","weiblich");
+list_select_item("Zivilstand:","ledig");
+#obj_mouse_drag("Geschlecht:", 55, 5, 15,40);
+#obj_mouse_drag("Zivilstand:", 55, 5, 15,80);
+button_set ("Grenzgänger:", ON);
+edit_set("AHV-Nr:", "123.456.78.911");
+edit_set("Geburtsdatum:", "29.02.1972<Tab>");
+
+set_window("CAPC", 5);
+button_press("Save");
+
+
+###close person
+wait(8);
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",uniquenom, ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+#test steps to view prospect data
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+
+set_window("CAPC", 4);
+
+####test for correct first name
+obj_get_info("Vorname:","value",user);
+if (user==ddt_val(table, "firstname"))
+ tl_step("firstname correct?",0,"correct first name");
+else
+ tl_step("firstname correct?",1,"incorrect first name");
+
+
+####test for correct last name
+obj_get_info("Name:","value",user);
+if (user==uniquenom)
+ tl_step("lastname correct?",0,"correct last name");
+else
+ tl_step("lastname correct?",1,"incorrect last name");
+
+obj_get_info("Domizilkanton","value",canton);
+if(canton=="GENF")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if(land=="ITALIEN")
+ tl_step("correct country?",0,"correct");
+else
+ tl_step("correct country?",1,"incorrect");
+
+set_window("CAPC", 5);
+button_press("arrow_right");
+
+set_window("CAPC", 5);
+obj_get_info("Nationality","value",citizen);
+if(citizen=="ITALIEN")
+ tl_step("correct nationality?",0,"correct");
+else
+ tl_step("correct nationality?",1,"incorrect");
+
+button_get_state ("Grenzgänger:", checked);
+if(checked=="1")
+ tl_step("border commuter?",0,"correct");
+else
+ tl_step("border commuter?",1,"incorrect");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("create minimum prospect data test completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 304bwr_new_address
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1 
+#
+#Objectives: edit by replacing address with new address data 
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 31-Jan-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_create\client
+#
+#script called by and parameters to include:
+# called by build scripts as td144/a04bwr_n
+# parameters spreadsheet and who to choose row for update input
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_create\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+###navigate to addressing
+set_window("CAPC", 4);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI");
+wait(8);
+list_select_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+#select the information address for replacing address
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#1");
+button_press("ersetzen");
+
+
+#enter new data from spreadsheet
+set_window("AddressingEditor", 13);
+###edit_set("UIField$3_1", "streetvalue"); ##can not find strasse field
+###the script takes advantage of the 'error' to not require a street value
+edit_set("strasse_no", ddt_val(table, "streetno"));
+edit_set("Postleizahl:", ddt_val(table, "postcode"));
+edit_set("Ort:", ddt_val(table, "city"));
+list_select_item("Domizilkanton /","TESSIN");
+list_select_item("Domizilland:","SCHWEIZ");
+list_select_item("Auswahl", "information (n.t.)");
+button_press(">");
+
+##save the changes
+button_press("OK");
+
+##example to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "streetno") & ddt_val(table, "city"));
+wait(5);
+
+###replace a different address with a current address
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#4");
+button_press("ersetzen");
+
+###select current address from dropdown list
+set_window("AddressingEditor", 14);
+obj_mouse_drag("Bestehende Adressierung:", 10, 10, 40, 40)
+
+list_select_item("Auswahl", "correspondence (n.t.)");
+button_press(">");
+button_press("OK");
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(5);
+
+####if statements allow running out of sequence from build 1.2.0 script
+set_window("CAPC", 4);
+list_get_item("Tree_Navigate",0, whichone);
+report_msg(whichone);
+if(whichone!="TREE_ROOT;Kevin Schmidt, 1909-02-20, 4433 Lucern")
+ {
+ #navigate to addressing
+ set_window("CAPC", 4);
+ list_expand_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI");
+ wait(5);
+ list_select_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 8687 TI;Adressierung");
+ wait(5);
+ }
+
+if(whichone=="TREE_ROOT;Kevin Schmidt, 1909-02-20, 4433 Lucern")
+ {
+ set_window("CAPC", 4);
+ list_expand_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 4433 Lucern");
+ wait(5);
+ list_select_item("Tree_Navigate", "TREE_ROOT;Kevin Schmidt, 1909-02-20, 4433 Lucern;Adressierung");
+ wait(5);
+ }
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+
+#test steps to view new address data
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#1");
+button_press("Details");
+
+####test for correct address city
+set_window("AddressingEditor", 4);
+obj_get_info("Ort:","value",location);
+if (location==ddt_val(table, "city"))
+ tl_step("correct city?",0,"correct");
+else
+ tl_step("correct city?",1,"incorrect");
+
+##close details
+set_window("AddressingEditor", 2);
+button_press("OK");
+
+####test for correct address type for replaced with new address
+set_window("CAPC_Address", 4);
+tbl_get_cell_data("addresses_table",1, "Verwendung", addr_type);
+if (addr_type=="information (n.t.)")
+ tl_step("correct type?",0,"correct");
+else
+ tl_step("correct type?",1,"incorrect");
+
+##the anticipated value of address in table
+place=ddt_val(table, "city") & " " & ddt_val(table, "postcode");
+
+####test for correct address type
+set_window("CAPC_Address", 4);
+tbl_get_cell_data("addresses_table",1, "Adressierung", addr_type);
+if (addr_type==place)
+ tl_step("correct place?",0,"correct");
+else
+ tl_step("correct place?",1,"incorrect");
+
+###verifying the replaced-existing address data
+set_window("CAPC_Address", 4);
+tbl_get_cell_data("addresses_table",4, "Verwendung", addr_type);
+if (addr_type=="correspondence (n.t.)")
+ tl_step("correct replaced type?",0,"correct");
+else
+ tl_step("correct replaced type?",1,"incorrect");
+
+##the anticipated value of address in table
+place=ddt_val(table, "city") & " " & ddt_val(table, "postcode");
+
+####test for correct address type
+set_window("CAPC_Address", 4);
+tbl_get_cell_data("addresses_table",4, "Adressierung", addr_type);
+if (addr_type==place)
+ tl_step("correct replaced place?",0,"correct");
+else
+ tl_step("correct replaced place?",1,"incorrect");
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("update client data completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 304wr_edit_address
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1 
+#
+#Objectives: edit address data (change domicile address) 
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 26-Jan-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_update\client test data spreadsheet
+#
+#script called by and parameters to include:
+# called by build scripts as td138/a04wr_ed
+# parameters spreadsheet and who to choose row for update input
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_update\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+
+wait(10);
+
+###navigate to addressing
+set_window("CAPC", 6);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Sarah Schmidt, 1911-07-03, 8007 ZH");
+wait(8);
+list_select_item("Tree_Navigate", "TREE_ROOT;Sarah Schmidt, 1911-07-03, 8007 ZH;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+#select the domicile address for editing
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#2");
+button_press("ergänzen");
+
+#update data from spreadsheet
+set_window("AddressingEditor");
+edit_set("strasse_no", ddt_val(table, "streetno"));
+edit_set("Ort:", ddt_val(table, "city"));
+list_select_item("Domizilkanton /","GENF");
+list_select_item("Domizilland:","FRANKREICH");
+
+##example to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "streetno") &", "& ddt_val(table, "city"));
+
+##save the changes
+set_window("AddressingEditor", 3);
+button_press("OK");
+
+wait(5);
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(5);
+
+#navigate to addressing
+set_window("CAPC", 3);
+list_expand_item("Tree_Navigate", "TREE_ROOT;Sarah Schmidt, 1911-07-03, 8007 Lugano");
+wait(5);
+list_select_item("Tree_Navigate", "TREE_ROOT;Sarah Schmidt, 1911-07-03, 8007 Lugano;Adressierung");
+wait(5);
+
+####change the GUI maps for addressing
+GUI_close("CAPC.gui");
+GUI_load("ADDRESS.gui");
+
+
+#test steps to view new address data
+set_window("CAPC_Address", 4);
+tbl_set_selected_row("addresses_table", "#2");
+button_press("Details");
+
+####test for correct address city
+set_window("AddressingEditor", 4);
+obj_get_info("Ort:","value",location);
+if (location==ddt_val(table, "city"))
+ tl_step("correct city?",0,"correct");
+else
+ tl_step("correct city?",1,"incorrect");
+
+obj_get_info("Domizilkanton /","value",canton);
+if(canton=="GENF")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if(land=="FRANKREICH")
+ tl_step("correct country?",0,"correct");
+else
+ tl_step("correct country?",1,"incorrect");
+
+##close details
+set_window("AddressingEditor", 2);
+button_press("OK");
+
+GUI_close("ADDRESS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("update client data completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+#################THIS ONE IS FLAKY WITH BUGS###############333333
+##############################################################
+#Test Script Title: 303wr_edit_cont_prod
+##############################################################
+#Target application and version: CAP 1.2.0, capc v1.2.0 
+#
+#Objectives: edits contract and product data on existing client
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 11-feb-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_create\client has test data spreadsheet
+#
+#script called by and parameters to include:
+# called by build scripts as td69/a03wr_ne
+#  must use Carmen Schmidt to navigate properly through tree
+#
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+ 
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","Carmen","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+####change the GUI maps for contracts
+GUI_close("CAPC.gui");
+GUI_load("CONTRACTS.gui");
+
+###navigate to addressing
+set_window("CONTRACT", 2);
+list_expand_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG");
+wait(5);
+
+set_window("CONTRACT", 3);
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;PBI8 - GS MEILEN");
+wait(10);
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;P8G3 - GS KUESNACHT (ZH)");
+wait(5);
+
+button_press(">");
+wait(2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+wait(5);
+
+###enter this contract data
+set_window("CONTRACT", 7);
+edit_set("Gültig bis:", "31.12.2002");
+edit_set("Gerichtsstand:", "testing contract and product");
+edit_set("Bemerkung:", "remarks from testing");
+
+set_window("CONTRACT", 2);
+list_expand_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;AGB");
+wait(2);
+
+edit_set("Version", "1.99");
+list_select_item("type","General  (n.t.)");
+list_select_item("Abgabeart:","Bei Fax");
+edit_set("Abgabe-Datum:", "31.12.2003");
+
+###save contract and product data
+set_window("CONTRACT", 3);
+button_press("Speichern_1");
+wait(8);
+
+###go back to cap gui
+GUI_close("CONCTRACTS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null","Schmidt","Carmen","null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+wait(8);
+
+####change the GUI maps for contracts
+GUI_close("CAPC.gui");
+GUI_load("CONTRACTS.gui");
+
+set_window("CONTRACT", 2);
+list_expand_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG");
+wait(5);
+
+set_window("CONTRACT", 3);
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;PBI8 - GS MEILEN");
+wait(10);
+list_select_item("person_tree", "TREE_ROOT;Carmen Schmidt, 1984-11-01, 8195 ZG;P8G3 - GS KUESNACHT (ZH)");
+wait(5);
+
+button_press(">");
+wait(2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+
+####test for correct data
+
+obj_get_info("Gerichtsstand:","value",text);
+if (text=="testing contract and product")
+ tl_step("text correct?",0,"correct");
+else
+ tl_step("text correct?",1,"incorrect");
+
+obj_get_info("Bemerkung:","value",text2);
+if (text2=="remarks from testing")
+ tl_step("remarks correct?",0,"correct");
+else
+ tl_step("remarks correct?",1,"incorrect");
+
+set_window("CONTRACT", 2);
+list_expand_item("contract_tree", "Child node of null;Kontobasisvertrag 1");
+set_window("CONTRACT", 2);
+list_select_item("contract_tree", "Child node of null;Kontobasisvertrag 1;AGB");
+wait(2);
+
+obj_get_info("Version","value",text3);
+if (text3=="1.99")
+ tl_step("version correct?",0,"correct");
+else
+ tl_step("version correct?",1,"incorrect");
+
+list_get_selected ("type", address, item_num);
+if (address=="General  (n.t.)")
+ tl_step("type correct?",0,"correct");
+else
+ tl_step("type correct?",1,"incorrect");
+
+list_get_selected ("Abgabeart:", method, item_num);
+if (method=="Bei Fax")
+ tl_step("send method correct?",0,"correct");
+else
+ tl_step("send method correct?",1,"incorrect");
+
+###go back to cap gui
+GUI_close("CONCTRACTS.gui");
+GUI_load("CAPC.gui");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+report_msg("edit contract and product data completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+
+##############################################################
+#Test Script Title: 301wr_update_client_person
+##############################################################
+#Target application and version: CAP 1.0 
+#
+#Objectives: update personal data (last name, address)
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 26-Jan-2000
+#
+##
+#scripts called or input data file locations: 
+# 901_search(partnerid, lname, fname, birthdate, contractid)
+# 900_login, 902_shutdown
+# T:\\testdata\\CAP_update\client for test data spreadsheet
+#
+#script called by and parameters to include:
+# called by build scripts as td11/a01wr_up
+# call this with spreadsheet, who for parameters
+#related requirements: none for integration testing
+#
+##############################################################
+
+#####
+#any startup script to be called
+#place to set environment variables or call unique wrun.ini
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+#####
+
+#####
+#any data refresh actions
+#assumes 20 demo (schmidt) partner ids are refreshed, and unchanged
+#####
+
+#####
+#reload gui files
+GUI_close_all();
+GUI_load("search.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("update client test begins");
+##############################################################
+
+#call login script to start the application 
+call_close "td185\a00_logi"("1");
+#wait on GUI to initialize
+wait(5);
+
+
+##statements to select and open the test data 'spreadsheet': 1st input parameter
+table="T:\\testdata\\CAP_update\\" & spreadsheet & ".xls" ;
+rc=ddt_open(table);
+if (rc!=E_OK)
+ pause("ERROR");
+rc=ddt_get_row_count(table, RowNum);
+if (rc!=E_OK)
+ pause("ERROR");
+
+
+##statements to select a specific spreadsheet row using 'who': 2nd input parameter
+ddt_set_row(table,who);
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "lastname"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+
+wait(5);
+
+#statement to update data from spreadsheet
+set_window ("CAPC", 9);
+edit_set ("Name:", ddt_val(table, "othername")  );
+edit_set ("street", ddt_val(table, "street")  );
+edit_set ("/", ddt_val(table, "streetno")  );
+edit_set ("Ort:", ddt_val(table, "city")  );
+list_select_item("Domizilkanton","SCHWYZ");
+list_select_item("Domizilland:","SCHWEIZ");
+list_select_item("Korrespondenzsprache","German (n.t.)");
+#obj_mouse_drag ("Domizilkanton", 5, 5, 45, 25);
+#obj_mouse_drag ("Domizilland:", 5, 5, 45, 25);
+#obj_mouse_drag ("Korrespondenzsprache", 5, 5, 45, 55);
+button_set ("VIP", ON);
+
+##example to see spreadsheet data working
+report_msg("new data is" & ddt_val(table, "othername") & ddt_val(table, "street") & ddt_val(table, "city"));
+
+set_window("CAPC", 4);
+button_press("arrow_right");
+wait(2);
+set_window("CAPC", 4);
+edit_set("VIP-Grund:", "testing VIP reason");
+
+set_window("CAPC", 4);
+button_press("arrow_right");
+wait(2);
+
+set_window("CAPC", 9);
+edit_set("Ausweisnummer:", "01234567890");
+edit_set("Ausstellungsort:", ddt_val(table, "canton") );
+
+##save the changes
+set_window("CAPC", 3);
+button_press("Save");
+wait(5);
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+##############################################################
+#call search script 
+call_close "td79\a01_sear"("null",ddt_val(table, "othername"),ddt_val(table, "firstname"),"null","null");
+###("partnerid","lname","fname","birthdate","contractid"); 
+ ###parameterized test takes search criteria input values
+##############################################################
+
+###open the person
+set_window("Person", 4);
+tbl_set_selected_row("Suchergebnis", "#0");
+button_press("Übernehmen_button");
+
+#test steps to view new address data
+set_window("CAPC", 4);
+
+####test for correct first name
+obj_get_info("Vorname:","value",user);
+#report_msg(user & " , " & ddt_val(table, "firstname"));
+if (user==ddt_val(table, "firstname"))
+ tl_step("firstname correct?",0,"correct first name");
+else
+ tl_step("firstname correct?",1,"incorrect first name");
+
+
+####test for correct last name
+obj_get_info("Name:","value",user);
+#report_msg(user & " , " & ddt_val(table, "othername"));
+if (user==ddt_val(table, "othername"))
+ tl_step("lastname correct?",0,"correct last name");
+else
+ tl_step("lastname correct?",1,"incorrect last name");
+
+set_window("CAPC", 4);
+if (button_check_state ("VIP",OFF) == E_OK)
+ tl_step("VIP ON?",1,"incorrect"); #report_msg("VIP error");
+if (button_check_state ("VIP", ON) == E_OK)
+ tl_step("VIP ON?",o,"correct"); #report_msg ("VIP OK");
+
+obj_get_info("Domizilkanton","value",canton);
+if(canton=="SCHWYZ")
+ tl_step("correct canton?",0,"correct");
+else
+ tl_step("correct canton?",1,"incorrect");
+
+obj_get_info("Domizilland:","value",land);
+if(land=="SCHWEIZ")
+ tl_step("correct country?",0,"correct");
+else
+ tl_step("correct country?",1,"incorrect");
+
+
+
+set_window("CAPC", 4);
+button_press("arrow_right");
+wait(2);
+
+set_window("CAPC", 4);
+obj_get_info("VIP-Grund:","value",text);
+if (text=="testing VIP reason")
+ tl_step("reason correct?",0,"correct ");
+else
+ tl_step("reason correct?",1,"incorrect");
+
+set_window("CAPC", 4);
+button_press("arrow_right");
+wait(2);
+
+set_window("CAPC", 4);
+obj_get_info("Ausweisnummer:","value",text);
+if (text=="01234567890")
+ tl_step("pass number correct?",0,"correct ");
+else
+ tl_step("pass number correct?",1,"incorrect");
+
+###close person
+set_window("CAPC", 4);
+menu_select_item("Datei;Schliessen");
+
+
+##############################################################
+call_close "td142\a02_shut"("1"); ## close application from title bar button
+ddt_close(table);
+report_msg("update client data completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+
+##############################################################
+#Test Script Title: 900_login
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1
+#
+#Objectives: starts CAP application as a java application, will take a
+# parameter to indicate which GUI server host to connect to
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 29-Nov-1999, 23-January-2000
+#
+#scripts called or input data file locations: 
+#
+#script called by and parameters to include:
+# many as td185/a00_logi
+# always takes a search parameter (GUIhost)
+#
+##############################################################
+
+#####
+#variable declarations, compiled functions, other functions
+# parameters passed in are 
+# GUIhost
+#####
+ 
+#####
+#load other gui files
+GUI_load("MSDOS_shell.gui");
+GUI_load("ULC_monitor.gui");
+GUI_load("LOGIN.gui");
+GUI_load("CAPC.gui");
+#####
+
+##############################################################
+report_msg("starting process to open application");
+##############################################################
+
+#start_transaction("invoke_cap");
+
+if(GUIhost=="1")
+ {
+ ###the host for test development (testi2)
+ #to start the application from java bat file for test development
+ invoke_application("C:\\capc\\test\\scripts\\CAPgui.bat","","",SW_SHOW);
+ }
+else
+ {
+  if(GUIhost=="2")
+  {
+  ###the host for regression test playback (testi0)?
+  #to start the application from java bat file for test replay
+  invoke_application("D:\\install\\capc\\scripts\\CAPgui.bat","","",SW_SHOW);
+  }
+ else
+  { 
+  ###for cases where host parameter unknown
+  report_msg("error: specify a host when calling");
+  }
+ }
+
+#############move application to consistent starting point###
+
+i = 1;
+do
+ {
+ if (win_exists ("CAPC")== E_OK)
+  {
+  report_msg ("application started after " &i& " loops"); 
+  i=100;
+  }
+ type (i++);
+ }
+while (i < 100);
+
+#end_transaction("invoke_cap");
+
+
+#############minimize the DOS window and move the ULC managment window
+win_min("MSDOS_shell");
+win_move ("ULC_Monitor", 800, 200);
+
+###close the GUI screens
+GUI_close ("MSDOS_shell.gui"i); 
+GUI_close ("ULC_monitor.gui"); 
+
+set_window("CAPC", 13);
+win_move("CAPC",20,20);
+
+set_window("CAPC", 16);
+menu_select_item("Datei;Log In...");
+
+set_window("LOGIN", 8);
+edit_set("User name:", "t111098");
+edit_set("Password:", "password");
+button_press("Login");
+
+wait(2);
+
+set_window("LOGIN", 8);
+list_select_item ("Entity", "UBS Group -Switzerland (n.t.)");
+button_press("OK");
+
+
+
+##############################################################
+report_msg("startup actions completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 901_search
+##############################################################
+#Target application and version: CAP 1.0
+#
+#Objectives: take search criteria and execute a search
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Nov-1999
+#
+#scripts called or input data file locations: none
+# test each parameter for string 'null'--indicating not a criteria item
+#
+#script called by and parameters to include:
+# 203_wr_search_one
+# always takes 5 search parameters (partnerid, lname, fname, birthdate, contractid)
+# remember to define these as parameters under file/test properties
+# called as td79/a01_sear
+##############################################################
+
+#####
+#variable declarations, compiled functions, other functions
+# parameters passed in are 
+# partnerid
+# lname
+# fname
+# birthdate
+# contractid
+dateused="no"
+#####
+ 
+#####
+#reload gui files
+#####
+
+#assume prior script invoked application 
+
+##############################################################
+report_msg("begin entering search criteria values of");
+report_msg(partnerid &", "& lname &", "& fname &", "& birthdate &", "& contractid);
+##############################################################
+
+
+#if(partnerid != "null")
+# {
+# ###enter partnerid value
+# }
+#else
+# { 
+# ###tab over field
+# }
+
+#click the search icon
+set_window("CAPC", 5);
+button_press("Suchen_icon");
+
+wait(2);
+
+if(lname != "null")
+ {
+ ###enter partnerid value
+ set_window("Person", 16);
+ edit_set("Name:",lname);
+ }
+else
+ { 
+ ###must have a value, so enter %
+ set_window("Person", 16);
+ edit_set("Name:","%%%");
+ }
+
+if(fname != "null")
+ {
+ ###enter partnerid value
+ set_window("Person", 6);
+ edit_set("Vorname:",fname);
+ }
+else
+ { 
+ ###tab over field
+ edit_set("Vorname:","");
+ }
+
+if(birthdate != "null")
+ {
+ ###enter partnerid value
+ set_window("Person", 20);
+ edit_type("Geburtsdatum:", birthdate & "<kReturn>");
+ dateused="yes";
+ }
+else
+ { 
+ ###tab over field
+ edit_set("Geburtsdatum:", "");
+ }
+
+#if(contractid != "null")
+# {
+# ###enter partnerid value
+# }
+#else
+# { 
+# ###tab over field
+# }
+
+###execute search
+ set_window("Person", 2);
+ obj_get_info("Suchen_button","enabled",cansearch);
+ if(cansearch==1)
+  {
+  set_window("Person", 2);
+  #start_transaction("search_time");
+  button_press("Suchen_button");
+  }
+ else
+  {
+  if(cansearch==0)
+   {
+   set_window("Person", 6);
+   #start_transaction("search_time");
+   button_press("search_icon");
+   }
+  else
+  report_msg("search error");
+  }
+
+###above 2 start transactions and following end transaction would
+#end_transaction("search_time");
+wait(5);
+
+
+##############################################################
+#ddt_close(table);
+report_msg("search action completed");
+###end of test
+##############################################################
+
+
+BREAK
+
+
+##############################################################
+#Test Script Title: 902_shutdown
+##############################################################
+#Target application and version: CAP 1.0
+#
+#Objectives: close open screens and application
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 10-Nov-1999
+#
+#scripts called or input data file locations: none
+# 
+#
+#script called by and parameters to include:
+# numerous
+# always takes 1 parameter "how" to indicate how to close screens or application)
+# remember to define the parameter "how" under file/test properties
+# called as td142/a02_shut
+##############################################################
+
+
+#####
+#variable declarations, compiled functions, other functions
+# parameters passed in are 
+# how
+#####
+ 
+#####
+GUI_close_all();
+GUI_load("CAPC.gui");
+#####
+
+#assume prior script invoked application 
+
+##########first step should logout if not already logged out
+set_window("CAPC", 5);
+obj_get_info ("Datei", "count", menusize);
+
+if (menusize > 3)
+ {
+ set_window("CAPC", 5);
+ menu_select_item("Datei;Log Out");
+ }
+wait(2);
+set_window("CAPC", 5);
+obj_get_info ("Datei", "count", menusize);
+
+if (menusize < 5)
+ {
+ report_msg("logged out");
+ }
+
+##############################################################
+report_msg("closing application with method " & how);
+##############################################################
+
+
+if(how == "1")
+ {
+ ###close from title bar button
+ report_msg("button");
+ win_close("CAPC");
+ }
+else
+ {
+ if(how == "2")
+  {
+  ###close from menu option
+  report_msg("dropdown");
+  set_window("CAPC", 3);
+  menu_select_item("Datei;Beenden");
+  }
+ else
+  {
+  if(how == "3")
+   {
+   ###a loop to close all screens?
+   }
+  else
+   { 
+   report_msg("error calling close script");
+   texit("ouch");
+   }
+  }
+ }
+
+##############################################################
+report_msg("should be closed");
+###end of test
+##############################################################
+
+
+BREAK
+
+##############################################################
+#Test Script Title: 903_newpartner
+##############################################################
+#Target application and version: CAP 1.0, capc v1.1.1
+#
+#Objectives: performs steps to begin entering new partner information
+#  does not create and save the partner
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 25-Jan-2000
+#
+#scripts called or input data file locations: 
+#
+#script called by and parameters to include:
+# many
+# remember to define these as parameters under file/test properties
+#
+# script should be called with 2 parameters, lastname, firstname
+# script called with 3rd parameter for person type (prospect, client,,,)
+# called as td145/a03_newp
+##############################################################
+
+
+#####
+#variable declarations, compiled functions, other functions
+# parameters passed in are 
+# firstname, lastname, persontype
+#####
+ 
+#####
+#reload gui files
+#####
+
+#assume prior script invoked application 
+
+##############################################################
+report_msg("preparing to enter new partner");
+##############################################################
+
+#click new partner button
+set_window("CAPC", 5);
+button_press("Person Eröffnen");
+
+##first search for the new person 
+set_window("Person", 6);
+edit_set("Name:", lastname);
+edit_set("Vorname:", firstname);
+button_press("Suchen_button");
+
+set_window("Search_Warning", 1);
+if(button_press("OK")==E_OK)
+ report_msg("person is unique for new partner");
+else
+ report_msg("person is not unique for new partner");
+
+set_window("Person", 4);
+button_press("Eröffnen_button");
+
+###open new person with 3rd called parameter "persontype"
+report_msg(persontype);
+
+
+#################Object technology problem w LISTS##############
+set_window("Opennew", 10);
+win_move ("Opennew", 150, 150);
+if(persontype=="client") list_select_item("personart","Client (n.t.)");
+#obj_mouse_drag ("personart", 5, 5, 25, 100);
+if(persontype=="prospect") list_select_item("personart","Prospect (n.t.)");
+
+set_window("Opennew", 10);
+button_press("Eröffnen...");
+
+##############################################################
+report_msg("ready to enter new partner data");
+###end of test
+##############################################################
+
+##############################################################
+#Test Script Title: 904_unique
+##############################################################
+#Target application and version: CAP 1.0
+#
+#Objectives: returns value derived from sysdate + random number
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 15-Nov-1999
+#
+#scripts called or input data file locations: get_time(), srand(), rand()
+#
+#script called by and parameters to include:
+# many
+# remember to define these as parameters under file/test properties
+#
+##############################################################
+
+wait(1);
+datetime=get_time( ); ###retrieves sysdate as an integer string
+#report_msg("datetime is " & datetime);
+
+srand(datetime); ###seeds rand() with time of day
+number=100 * int(100 * (1 +rand( ))) ; ###produces a random integer
+
+answer=int(number + datetime);
+report_msg("answer is " &answer);
+#texit(answer);
+treturn(answer);
+ 
+##############################################################
+report_msg("datetime is " & datetime & "answer is " &answer);
+###end of test
+##############################################################
+
+
+
+BREAK
+
+##############################################################
+#Test Script Title: capc_v_111
+##############################################################
+#Target application and version: CAP 1.0.1, capc v1.1.1
+#
+#Objectives: Test search partner gui
+#
+#
+#Authors: Kevin Martin
+#
+#Create and update dates: 25-jan-2000
+#
+#scripts called or input data file locations: 
+# technically equivalent to the 1.0.1, with all updated to 1.1.1
+# 203_wr_search_one
+# 202_wr_search_none
+# 201_wr_search_many
+##############################################################
+
+setvar("searchpath", "<T:\\TDComDir\\CAPGUI\\Tests\\>");
+
+#call_close "td124\\a03wr_se"( ); ###search one
+
+#call_close  "td37\\a01wr_se"( ); ###search many
+
+#call_close  "td33\\a02wr_se"( ); ###search none
+
+###new capabilities demonstrated to committee in 1.1.1
+
+#####the spreadsheet rows must be managed so that tests do not use same person
+
+#call_close  "td172\\a04awr_v"("client","1" ); ###view postal address MUST USE 1
+
+#call_close  "td11\\a01wr_up"("client","1"); ###update client person
+
+#####call_close  "td178\\a04bwr_v"( ); ###view electronic address accomplished in postal
+
+#call_close  "td138\\a04wr_ed"("client","2"); ###edit address MUST USE 2
+
+#call_close  "td41\\a01wr_ne"("client","1"); ###edit--new address MUST USE 1
+
+#call_close  "td144\\a04bwr_n"("client","1"); ###edit--replace address MUST USE 1
+
+
+#call_close  "td179\\a07wr_pr"("prospect","4" ); ###new prospect min
+
+##############################################################
+#texit("done");
+report_msg("finished tests for this release");
+###end of test
+##############################################################
+
+
+
+
+
+
+
+
+
+
+
+
+

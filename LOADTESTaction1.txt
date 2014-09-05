@@ -1,0 +1,610 @@
+
+#include "as_web.h"
+#include "\\gpspdmqa7\lrunner\include\as_web.h"
+
+char temp_name[50];
+int j;
+int arr_len = -99;
+int iMAX;
+
+Action1()
+{
+	
+	/*following action starts browser at proper URL (env 84) from dat file*/
+	lr_start_transaction("GC_MO_G14_02_CRUD_note_Invoke");
+	web_url("OMITTING PROPRIETARY STUFFjsp",
+		"URL=OMITTING PROPRIETARY STUFF
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=",
+		"Snapshot=t118.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G14_02_CRUD_note_Invoke",LR_AUTO);
+
+	lr_think_time( 1 );
+
+	/*
+	 * After Browser is up and connected to ePDM, enter the username and password of the appropriate 
+	 * lr user (LOADTEST211,test).
+	 */
+	lr_start_transaction("GC_MO_G14_03_CRUD_note_Login");
+	web_submit_form("login",
+		"Snapshot=t119.inf",
+		ITEMDATA,
+		"Name=login_name", "Value=<p_username>", ENDITEM,
+		"Name=login_password", "Value=<p_password>", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G14_03_CRUD_note_Login", LR_AUTO);
+
+	lr_think_time( 1 );
+
+
+	/*
+	 * Now choose OMITTING PROPRIETARY STUFF from registered applications.
+	 */
+	lr_start_transaction("GC_MO_G14_04_CRUD_note_ChooseGC");
+	web_link("OMITTING PROPRIETARY STUFF",
+		"Text=OMITTING PROPRIETARY STUFF",
+		LAST);
+	web_url("ControllerServlet",
+		"URL=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"TargetFrame=",
+		"Resource=0",
+		"Referer=<p_url>/espdmServlet",
+		"Mode=HTML",
+		LAST);
+	web_url("GCLayerProfile.jsp",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"Snapshot=t120.inf",
+		"Mode=HTML",
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/btn_20_user2.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", "Referer=<p_url>/ControllerServlet?Bean=GlobalConnector", ENDITEM,
+		LAST);
+	lr_end_transaction("GC_MO_G14_04_CRUD_note_ChooseGC", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	/*correlating the ICN listed in user's quote queue */
+	web_reg_save_param ("p_myICN", "NOTFOUND=EMPTY", "LB=this.ICN=\"", "RB=\";\r\n", "ORD=All", LAST); 
+
+	/*
+	 * Now go to ITO 'View My Assigned Quote Queue'.
+	 */
+	lr_start_transaction("GC_MO_G14_05_CRUD_note_MyITOqueue");
+		web_submit_data("ControllerServlet",
+		"Action=<p_url>/ControllerServlet",
+		"Method=POST",
+		"TargetFrame=",
+		"Referer=<p_url>/ControllerServlet?Bean=GlobalConnector",
+		"Mode=HTML",
+		ITEMDATA,
+		"Name=Bean", "Value=ViewAssignedQ", ENDITEM,
+		"Name=ProcessType", "Value=<p_phase>", ENDITEM,
+		EXTRARES,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/btn_20_action7.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_btm.gif", ENDITEM,
+		"Url=/gc/images/btn_20_user2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+		LAST);
+	web_url("OMITTING PROPRIETARY STUFF.jsp2",
+		"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t16.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G14_05_CRUD_note_MyITOqueue", LR_AUTO);
+
+	lr_think_time( 1 );
+
+	/*
+	 * Now viewing My ITO Queue
+	 */
+
+	//graceful exit to next action if test data not found for user
+	if(atoi(lr_eval_string("<p_myICN_count>")) == 0)
+		{
+		lr_log_message("INFO: Test data problems (p_myICN_count) for user %s",lr_eval_string("<p_username>"));
+		lr_log_message("INFO: iteration was %s",lr_eval_string("<p_iter>"));
+		goto mylogout;
+		}
+	else
+		{
+		j=atoi(lr_eval_string("<p_myICN_count>"));//number of ICN in queue
+		lr_log_message("INFO: number of ICN found = %d",j);
+		j=atoi(lr_eval_string("<p_iter>"));//this is iteration number = <p_iter>
+		sprintf(temp_name,"<p_myICN_%d>",j);	
+		lr_save_string(lr_eval_string(temp_name), "p_ICN"); 
+		lr_log_message("INFO: p_ICN this loop will be from p_myICN_[%d] = %s.",j, lr_eval_string("<p_ICN>"));
+		}
+
+
+	/*anticipating 1 loop per iteration, with 1 ICN per iteration*/
+  	for(i=1; i<=EVENTS; i++)
+  	{
+
+    	/** [[ Begin randomly set wait times. **/
+
+    	i_wait_time = RandGen(iMIN, iMAX);
+    	lr_output_message("WaitTime = %d",i_wait_time);
+    	
+    	lr_log_message("/****** Vuser reports his status to the Controller. ******/");
+    	lr_save_datetime(TIME_FMT1, DATE_NOW + TIME_NOW, "p_datetime");
+    	lr_save_datetime(TIME_FMT1, i_wait_time, "p_datetime2");
+
+    	lr_vuser_status_message(" Waiting %d secs at %s. ETC: %s. Iter # %d.",
+                                      i_wait_time,
+                                      lr_eval_string("<p_datetime>"),
+                                      lr_eval_string("<p_datetime2>"),
+                                      i);
+    	lr_think_time(i_wait_time); 
+
+    	/** End randomly set wait times. ]] **/
+
+  	    /*
+		 * Beginning at My Quotes, select M/O for the ICN 
+		 */
+		
+		/* correlate the string for ICN-line-part (4 number sequences)*/
+		web_reg_save_param ("p_myline", "NOTFOUND=EMPTY", "LB=ID>", "RB=<", "ORD=All", LAST); 
+		
+		lr_start_transaction("GC_MO_G14_06_CRUD_note_selectICN");
+			web_submit_data("ControllerServlet2",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/ControllerServlet",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=Bean", "Value=ViewLine", ENDITEM,
+			"Name=icn", "Value=<p_ICN>", ENDITEM,
+			"Name=case", "Value=<p_phase>", ENDITEM,
+			EXTRARES,
+			"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+			"Url=/gc/images/gc_logo.gif", ENDITEM,
+			"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+			"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+			"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+			"Url=/gc/images/btn_20_notes.gif", ENDITEM,
+			"Url=/gc/images/icn_selected.gif", ENDITEM,
+			"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+			"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+			LAST);	
+
+		web_url("GCLayerProfile.jsp3",
+			"URL=OMITTING PROPRIETARY STUFFe.jsp",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=<p_url>/ControllerServlet",
+			"Snapshot=t17.inf",
+			"Mode=HTML",
+			LAST);
+		lr_end_transaction("GC_MO_G14_06_CRUD_note_selectICN", LR_AUTO);
+
+		lr_think_time( 1 );
+
+		if(atoi(lr_eval_string("<p_myline_count>")) == 0)
+			{
+			lr_log_message("INFO: Test data problems (p_myline_count) for user %s",lr_eval_string("<p_username>"));
+			lr_log_message("INFO: ICN was %s on iteration %d", lr_eval_string("<p_ICN>"),i);
+			break;
+			}
+		else
+			{
+			//logging list of captured lines
+			lr_log_message("INFO: number of lines found = %s",lr_eval_string("<p_myline_count>"));
+			arr_len = atoi(lr_eval_string("<p_myline_count>"));
+			for(j=1; j<=arr_len; j++)
+				{
+				sprintf(temp_name,"<p_myline_%d>",j);
+				lr_log_message("INFO:  p_myline_[%d] = %s.",j, lr_eval_string(temp_name));
+				}
+			//forcing the p_line to be based on loop iteration i
+			sprintf(temp_name,"<p_myline_%d>",(2*i)-1);	
+			lr_save_string(lr_eval_string(temp_name), "p_line"); 
+			lr_log_message("INFO: p_line this loop will be from p_myline_[%d] = %s.",i, lr_eval_string("<p_line>"));
+			}	
+
+		lr_log_message("INFO: Before CRUD actions begin");
+		lr_log_message("INFO: Iteration %s ",lr_eval_string("<p_iter>"));
+		lr_log_message("INFO: username = %s ",lr_eval_string("<p_username>"));
+		lr_log_message("INFO: the ICN = %s",lr_eval_string("<p_ICN>"));
+		lr_log_message("INFO: the line = %s",lr_eval_string("<p_line>"));
+		lr_log_message("INFO: the note type : '%s'",lr_eval_string("<p_notetype>"));
+		lr_log_message("INFO: the note version : '%s'",lr_eval_string("<p_noteversion>"));
+		lr_log_message("INFO: the note status : '%s'",lr_eval_string("<p_notestatus>"));
+
+		/*
+		 * Now viewing Material Quote, select the icon to view attachments for the line.
+		 */
+
+		//need to correlate the version number is there a 1.0, 2.0????
+		web_reg_save_param ("p_priornotes", "NOTFOUND=EMPTY", "LB=javascript:showNote(", "RB=);", "ORD=All", LAST); 
+	
+		lr_start_transaction("GC_MO_G14_07_CRUD_note_selectnotes");
+			web_url("ControllerServlet3",
+			"URL=<p_url>/ControllerServlet?Bean=CrudAttachment&lineNo=<p_line>",
+			"TargetFrame=",
+			"Resource=0",
+			"Referer=",
+			"Mode=HTML",
+			LAST);
+		lr_end_transaction("GC_MO_G14_07_CRUD_note_selectnotes", LR_AUTO);
+
+		lr_think_time( 1 );
+		if(atoi(lr_eval_string("<p_priornotes_count>")) == 0)
+			{
+			lr_log_message("INFO: No prior notes exist for line %s",lr_eval_string("<p_line>"));
+			lr_log_message("INFO: New note will be version %s", lr_eval_string("<p_noteversion>"));
+			lr_log_message("INFO: ICN '%s' on iteration %d", lr_eval_string("<p_ICN>"),i);
+			}
+		else
+			{
+			lr_log_message("INFO: number of note versions found = %s",lr_eval_string("<p_priornotes_count>"));
+			arr_len = atoi(lr_eval_string("<p_priornotes_count>"));
+			for(j=1; j<=arr_len; j++)
+				{
+				sprintf(temp_name,"<p_priornotes_%d>",j);
+				lr_log_message("INFO: p_priornotes_[%d] = %s.",j, lr_eval_string(temp_name));
+				lr_advance_param("p_noteversion");				
+				}
+			lr_log_message("INFO: New note will be version %", lr_eval_string("<p_noteversion>"));
+			}
+
+		/*
+		 * Now viewing the notes (SC016), click on a tab appropriate to the note type parameter.
+		 */
+
+			
+		lr_start_transaction("GC_MO_G14_08_CRUD_note_selectTab");
+		web_submit_data("ControllerServlet4",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/ControllerServlet?Bean=CrudAttachment&lineNo=<p_line>",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=", ENDITEM,
+			"Name=name", "Value=<p_notetype>", ENDITEM,
+			"Name=Bean", "Value=CrudAttachment", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_08_CRUD_note_selectTab", LR_AUTO);	
+
+		lr_think_time( 1 );
+
+		
+
+		/*
+		 * Now choose to add a note.
+		 */
+
+		
+		lr_start_transaction("GC_MO_G14_09_CRUD_note_addnote");
+			web_url("gcmidnote.jsp",
+			"URL=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp?type=input_note",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=",
+			"Snapshot=t18.inf",
+			"Mode=HTML",
+			LAST);
+		lr_end_transaction("GC_MO_G14_09_CRUD_note_addnote", LR_AUTO);
+
+		lr_think_time( 1 );	
+
+		/*
+		 * Now enter and save the note.
+		 */	
+
+		
+		lr_start_transaction("GC_MO_G14_10_CRUD_note_savenote");
+			web_submit_data("ControllerServlet5",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp?type=input_note",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=input_note", ENDITEM,
+			"Name=Bean", "Value=CrudAttachment", ENDITEM,
+			"Name=note", "Value=<p_notetext>", ENDITEM,
+			"Name=chkboxvalue", "Value=", ENDITEM,
+			"Name=inputtextarea", "Value=<p_notetext>", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_10_CRUD_note_savenote", LR_AUTO);	
+
+		lr_think_time( 1 );
+
+
+		/*
+		 * New note details should be listed. 
+		 */
+
+	
+		/* Add task completed*/
+		
+		/*
+		 * Should be viewing a note created earlier
+		 * Next action should select that note and choose to modify
+		 */
+
+		lr_start_transaction("GC_MO_G14_11_CRUD_note_selectmodify");
+			web_submit_data("ControllerServlet6",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/ControllerServlet",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=modify_note", ENDITEM,
+			"Name=content", "Value=<p_username>;<p_noteversion>;<p_notetext>;<p_notestatus>|<p_notesource>", ENDITEM,
+			"Name=Bean", "Value=ModifyNote", ENDITEM,
+			LAST);
+		web_url("gcmidnote.jsp2",
+			"URL=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=",
+			"Snapshot=t19.inf",
+			"Mode=HTML",
+			EXTRARES,
+			"Url=/gc/images/btn_20_smenclose_e7e7e7_u.gif", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_11_CRUD_note_selectmodify", LR_AUTO);	
+
+		lr_think_time( 1 );
+
+		lr_advance_param("p_notestatus");
+
+		/*
+		 * Modify Note screen in view, will edit note content and save
+		 */
+
+
+		lr_start_transaction("GC_MO_G14_12_CRUD_note_modifysave");
+		web_submit_data("ControllerServlet7",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=modify_note", ENDITEM,
+			"Name=Bean", "Value=CrudAttachment", ENDITEM,
+			"Name=note", "Value=<p_newtext>", ENDITEM,
+			"Name=chkboxvalue", "Value=<p_username>;<p_noteversion>;<p_notetext>;<p_notestatus>|<p_notesource>", ENDITEM,
+			"Name=modifytextarea", "Value=<p_newtext>", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_12_CRUD_note_modifysave", LR_AUTO);
+
+		lr_think_time( 1 );
+
+
+		/*
+		 * Note has been modified. 
+		 */
+
+		/*
+		 * Should be viewing a note created and modified earlier
+		 * Next action should select that note and choose to delete it
+		 */
+
+
+		lr_start_transaction("GC_MO_G14_13_CRUD_note_deleteNote");
+			web_url("gcmidnote.jsp3",
+			"URL=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp?type=delete_note&chkboxvalue=<p_username>;<p_noteversion>;%20;<p_notestatus>|<p_notesource>^",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=",
+			"Snapshot=t20.inf",
+			"Mode=HTML",
+			EXTRARES,
+			"Url=/gc/images/btn_20_smenclose_e7e7e7_u.gif", "Referer=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp?type=delete_note&chkboxvalue=<p_username>;<p_noteversion>; ;<p_notestatus>|<p_notesource>^", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_13_CRUD_note_deleteNote", LR_AUTO);
+
+		lr_think_time( 1 );
+
+		/*
+		 * now choose delete button on confirmation popup
+		 */
+
+		lr_start_transaction("GC_MO_G14_14_CRUD_note_confirmdelete");
+			web_submit_data("ControllerServlet8",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/gc/jsp/genericflow/autoparts/gcmidnote.jsp?type=delete_note&chkboxvalue=<p_username>;<p_noteversion>; ;<p_notestatus>|<p_notesource>^",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=delete_note", ENDITEM,
+			"Name=Bean", "Value=CrudAttachment", ENDITEM,
+			"Name=note", "Value=", ENDITEM,
+			"Name=chkboxvalue", "Value=", ENDITEM,
+			"Name=deletetextarea", "Value=You have requested to delete this note. Deleted Information will be displayed but not be available for modification. Select 'Delete' to complete deletion. Select 'Cancel' to quit.", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_14_CRUD_note_confirmdelete", LR_AUTO);
+
+		lr_think_time( 1 );
+	
+		lr_advance_param("p_notestatus");
+	 
+		/*
+		 * Note should now have deleted status. 
+		 */
+
+		/*
+		 * Should be viewing a note created by the same username and it should be deleted status
+		 * Next action should select that note and choose to view its history
+		 */
+
+		/* find param that represents text of note being viewed from test*/
+		web_reg_find("Text=Created", "SaveCount=p_created_count", LAST); 
+		web_reg_find("Text=Modified", "SaveCount=p_modified_count", LAST); 
+		web_reg_find("Text=Deleted", "SaveCount=p_deleted_count", LAST); 
+		web_reg_find("Text=<p_notetext>", "SaveCount=p_original_count",LAST);
+		web_reg_find("Text=<p_newtext>", "SaveCount=p_edited_count",LAST);
+
+		lr_start_transaction("GC_MO_G14_15_CRUD_note_viewhistoryscreen");
+			web_url("ControllerServlet9",
+			"URL=<p_url>/ControllerServlet?Bean=CrudAttachment&type=view_history&chkboxvalue=<p_username>;<p_noteversion>;%20;<p_notestatus>|<p_notesource>",
+			"TargetFrame=",
+			"Resource=0",
+			"Referer=",
+			"Mode=HTML",
+			EXTRARES,
+			"Url=/gc/images/bs_divider_tp.gif", "Referer=<p_url>/ControllerServlet?Bean=CrudAttachment&type=view_history&chkboxvalue=<p_username>;<p_noteversion>; ;<p_notestatus>|<p_notesource>", ENDITEM,
+			"Url=/gc/images/bkd_lgo.gif", "Referer=<p_url>/ControllerServlet?Bean=CrudAttachment&type=view_history&chkboxvalue=<p_username>;<p_noteversion>; ;<p_notestatus>|<p_notesource>", ENDITEM,
+			"Url=/gc/images/btn_20_smenclose_e7e7e7_u.gif", "Referer=<p_url>/ControllerServlet?Bean=CrudAttachment&type=view_history&chkboxvalue=<p_username>;<p_noteversion>; ;<p_notestatus>|<p_notesource>", ENDITEM,
+			LAST);
+		lr_end_transaction("GC_MO_G14_15_CRUD_note_viewhistoryscreen", LR_AUTO);
+
+		/* no action relevant to load test when view history screen is closed */
+	
+		/* following tests verifies scripted events actually occurred */
+		OMITTING PROPRIETARY STUFF
+
+			
+
+		/*
+		 * Note has been viewed. 
+		 */
+
+		/*
+		 * return to SC005
+		 */
+
+		lr_think_time( 2 );
+
+		lr_start_transaction("GC_MO_G14_16_CRUD_note_Return");
+		web_submit_data("ControllerServlet10",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/ControllerServlet",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=type", "Value=", ENDITEM,
+			"Name=name", "Value=", ENDITEM,
+			"Name=Bean", "Value=SessionHandler", ENDITEM,
+			"Name=checkbox", "Value=<p_username>;<p_noteversion>;<p_newtext>;<p_notestatus>|<p_notesource>", ENDITEM,
+			EXTRARES,
+		"Url=/gc/jsp/genericflow/autoparts/template.xsl", "Referer=<p_url>/", ENDITEM,
+		"Url=/gc/images/gc_logo.gif", ENDITEM,
+		"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+		"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+		"Url=/gc/images/bs_divider_tp.gif", ENDITEM,
+		"Url=/gc/images/btn_20_user2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_notes.gif", ENDITEM,
+		"Url=/gc/images/btn_20_addnote2.gif", ENDITEM,
+		"Url=/gc/images/btn_20_supDoc_attached_b6bdd2.gif", ENDITEM,
+		LAST);
+		web_url("GCLayerProfile.jsp4",
+			"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=<p_url>/ControllerServlet",
+			"Snapshot=t21.inf",
+			"Mode=HTML",
+			LAST);
+		lr_end_transaction("GC_MO_G14_16_CRUD_note_Return", LR_AUTO);
+
+		/*
+		 * CRUD tasks completed, now go to my queue via ITO option and dropdown.
+		 */
+		lr_start_transaction("GC_MO_G14_17_CRUD_note_backtoqueue");
+		web_submit_data("ControllerServlet11",
+			"Action=<p_url>/ControllerServlet",
+			"Method=POST",
+			"TargetFrame=",
+			"Referer=<p_url>/ControllerServlet",
+			"Mode=HTML",
+			ITEMDATA,
+			"Name=Bean", "Value=ViewAssignedQ", ENDITEM,
+			"Name=ProcessType", "Value=<p_phase>", ENDITEM,
+			EXTRARES,
+			"Url=/gc/images/gc_logo.gif", ENDITEM,
+			"Url=/gc/images/bkd_navBarTop3.png", ENDITEM,
+			"Url=/gc/images/bkd_lgo.gif", ENDITEM,
+			"Url=/gc/images/btn_20_action7.gif", ENDITEM,
+			"Url=/gc/images/bs_divider_btm.gif", ENDITEM,
+			"Url=/gc/images/btn_20_smenclose_e7e7e7_d.gif", ENDITEM,
+			LAST);
+		web_url("GCLayerProfile.jsp5",
+			"URL=<p_url>/gc/jsp/genericflow/home/GCLayerProfile.jsp",
+			"TargetFrame=",
+			"Resource=0",
+			"RecContentType=text/html",
+			"Referer=<p_url>/ControllerServlet",
+			"Snapshot=t22.inf",
+			"Mode=HTML",
+			LAST);	
+		lr_end_transaction("GC_MO_G14_17_CRUD_note_backtoqueue", LR_AUTO);	
+
+		lr_log_message("INFO: Iteration %s and loop %d had data as follows",lr_eval_string("<p_iter>"),i);
+		lr_log_message("INFO: username was = %s",lr_eval_string("<p_username>"));
+		lr_log_message("INFO: the ICN was %s",lr_eval_string("<p_ICN>"));
+		lr_log_message("INFO: the line was %s",lr_eval_string("<p_line>"));
+		lr_log_message("INFO: the note type : '%s'",lr_eval_string("<p_notetype>"));
+		lr_log_message("INFO: the note text content : '%s'",lr_eval_string("<p_notetext>"));
+		lr_log_message("INFO: the edited note type : '%s'",lr_eval_string("<p_newtext>"));
+		lr_log_message("INFO: the note source : '%s'",lr_eval_string("<p_notesource>"));
+		lr_log_message("INFO: the note version : '%s'",lr_eval_string("<p_noteversion>"));
+		lr_log_message("INFO: the note status : '%s'",lr_eval_string("<p_notestatus>"));
+		lr_log_message("INFO: number of prior notes : '%s'",lr_eval_string("<p_priornotes_count>"));
+
+
+		} /** end of for-loop. **/
+
+	/*
+	 * From My ITO queue, click on logout
+	 */
+	mylogout:
+		lr_log_message("INFO: Iteration %s had data",lr_eval_string("<p_iter>"));
+		lr_log_message("INFO: username was = %s and password = %s",lr_eval_string("<p_username>"),lr_eval_string("<p_username>"));
+		lr_log_message("INFO: the ICN was %s",lr_eval_string("<p_ICN>"));
+		lr_log_message("INFO: the line was %s",lr_eval_string("<p_line>"));
+
+	lr_start_transaction("GC_MO_G14_18_CRUD_note_Logout");
+	web_url("logout",
+		"URL=<p_url>/servlet/logout",
+		"TargetFrame=",
+		"Resource=0",
+		"RecContentType=text/html",
+		"Referer=<p_url>/ControllerServlet",
+		"Snapshot=t136.inf",
+		"Mode=HTML",
+		LAST);
+	lr_end_transaction("GC_MO_G14_18_CRUD_note_Logout", LR_AUTO);
+
+
+	//appended recordings begin here
+
+
+
+	
+
+
+	return 0;
+}

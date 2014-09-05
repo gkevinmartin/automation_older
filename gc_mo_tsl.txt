@@ -1,0 +1,1107 @@
+####################################################
+#
+#  Title:  MO_CM
+#  Author: GC Team
+#  Date created: 05 March 2002
+#  Test purpose/description:
+#	  Functions for use in testing MO.	
+#
+#  Edit history:
+#		(1) nAddReleaseLine_Quote
+#		(2) nAddReleaseLine_Order
+#		(3) MO_AddLine
+#		(4) MO_CrudNote
+#		(5) MO_ExplodeLine
+#		
+####################################################
+
+
+##############################
+# (1) nAddReleaseLine_Quote
+##############################
+# Function for global use to navigate through MO in the quote lifecycle
+function nAddReleaseLine_Quote (in Username,
+				    			in Password,
+								in ICN,
+				  				in PartNumber)
+{
+# Declare variables
+static MO_GUI_Map,RowCount,Go_Num,Desc,i,Date,CellValue,rc,LoopStart;
+
+# Login
+rc = GC_Login(Username,Password,"GC");
+if (rc != E_OK)
+	{tl_step("Login Check",FAIL,"The application did not initiate correctly.");
+	 return E_GENERAL_ERROR;
+	}
+
+# Load the GUI Map
+MO_GUI_Map = TEST_PATH & "GuiMaps\\GC_MO.gui";
+GUI_unload_all();
+GUI_close_all();
+rc = GUI_load(MO_GUI_Map);
+if (rc != E_OK)
+	{tl_step("GUI Map Check",FAIL,"The gui map did not load correctly. RC = " & rc);
+	 return E_GENERAL_ERROR;
+	}
+
+# Look at the assigned queue
+set_window ("GE Power Systems", 60);
+web_link_click("olink_View_My_Assigned_Quote_Queue");
+
+# Check if Show All link exists
+set_window("GE Power Systems",60);
+if (obj_exists("olink_Show_All",1) == E_OK)
+	{web_link_click("olink_Show_All");
+	 LoopStart = 3;
+	}
+else
+	LoopStart = 2;
+
+# Determine the number of rows that are in the queue
+set_window ("GE Power Systems", 60);
+tbl_get_rows_count("otable_Queue",RowCount);
+
+# Loop through the rows to select the proper ICN 
+for (i=LoopStart;i<=RowCount;i++)
+	{tbl_get_cell_data("otable_Queue",i,"#2",CellValue);
+	 if (CellValue == ICN)
+	 	{Go_Num = i-LoopStart;
+		 Desc = "{class: \"object\", MSW_class: \"html_rect\", html_name: \"Go!\", location: \""&Go_Num&"\"}";
+	 	 GUI_add("","GE Power Systems","olink_Go!",Desc);
+	 	 set_window ("GE Power Systems", 1);
+	 	 web_image_click("olink_Go!", 9, 9);
+	 	 i=RowCount+1;
+		}
+	 if (i == RowCount)
+	 	{tl_step("ICN Search Check",FAIL,"The ICN was not found. ICN " & ICN);
+		 return E_GENERAL_ERROR;
+		}
+	}
+
+# Add Line
+set_window ("gcBody", 60);
+obj_exists("btn_AddLine",5);
+button_press("btn_AddLine");
+
+# Enter Line Details - Part Number, Quantity, MLI
+set_window ("Enter Line Details", 30);
+edit_set("edit_PartNumber",PartNumber);
+edit_set("edit_Quantity","1");
+button_set("rbtn_Firm",ON);
+
+# Press the Add button
+set_window ("Enter Line Details", 1);
+button_press("btn_Add");
+
+# Release the added line
+set_window ("gcBody", 60);
+Desc = "{class: \"check_button\", MSW_class: \"html_check_button\", html_name: \"CB\", location: \"0\"}";
+GUI_add("","gcBody","cbtn_Line",Desc);
+obj_exists("cbtn_Line",5);
+button_set("cbtn_Line",ON);
+button_press("btn_Release");
+
+# Logout
+set_window ("gcBody", 60);
+web_link_click("olink_Logout");
+
+# Close the browser
+win_activate ("Browser Main Window");
+win_close ("Browser Main Window");
+
+return E_OK;
+}
+
+
+##############################
+# (2) nAddReleaseLine_Order
+##############################
+# Function for global use to navigate through MO in the order lifecycle
+function nAddReleaseLine_Order (in Username,
+							    in Password,
+								in ICN,
+							    in PartNumber)
+{
+# Declare variables
+static MO_GUI_Map,RowCount,Go_Num,Desc,i,Date,CellValue,rc,LoopStart;
+
+# Login
+rc = GC_Login(Username,Password,"GC");
+if (rc != E_OK)
+	{tl_step("Login Check",FAIL,"The application did not initiate correctly.");
+	 return E_GENERAL_ERROR;
+	}
+
+# Load the GUI Map
+MO_GUI_Map = TEST_PATH & "GuiMaps\\GC_MO.gui";
+GUI_unload_all();
+GUI_close_all();
+rc = GUI_load(MO_GUI_Map);
+if (rc != E_OK)
+	{tl_step("GUI Map Check",FAIL,"The gui map did not load correctly. RC = " & rc);
+	 return E_GENERAL_ERROR;
+	}
+
+# Look at the assigned queue
+set_window ("GE Power Systems", 60);
+web_link_click("olink_View_My_Assigned_Order_Queue");
+
+# Check if Show All link exists
+set_window("GE Power Systems",60);
+if (obj_exists("olink_Show_All",1) == E_OK)
+	{web_link_click("olink_Show_All");
+	 LoopStart = 3;
+	}
+else
+	LoopStart = 2;
+
+# Determine the number of rows that are in the queue
+set_window ("GE Power Systems", 60);
+tbl_get_rows_count("otable_Queue",RowCount);
+
+# Loop through the rows to select the proper ICN 
+for (i=LoopStart;i<=RowCount;i++)
+	{tbl_get_cell_data("otable_Queue",i,"#2",CellValue);
+	 if (CellValue == ICN)
+	 	{Go_Num = i-LoopStart;
+		 Desc = "{class: \"object\", MSW_class: \"html_rect\", html_name: \"Go!\", location: \""&Go_Num&"\"}";
+	 	 GUI_add("","GE Power Systems","olink_Go!",Desc);
+	 	 set_window ("GE Power Systems", 1);
+	 	 web_image_click("olink_Go!", 9, 9);
+	 	 i=RowCount+1;
+		}
+	 if (i == RowCount)
+	 	{tl_step("ICN Search Check",FAIL,"The ICN was not found. ICN " & ICN);
+		 return E_GENERAL_ERROR;
+		}
+	}
+
+# Add Line
+set_window ("gcBody", 60);
+obj_exists("btn_AddLine",5);
+button_press("btn_AddLine");
+
+# Enter Line Details - Part Number, Quantity, MLI
+set_window ("Enter Line Details", 30);
+edit_set("edit_PartNumber",PartNumber);
+edit_set("edit_Quantity","1");
+
+# Press the Add button
+set_window ("Enter Line Details", 1);
+button_press("btn_Add");
+
+# Release the added line
+set_window ("gcBody", 60);
+Desc = "{class: \"check_button\", MSW_class: \"html_check_button\", html_name: \"CB\", location: \"0\"}";
+GUI_add("","gcBody","cbtn_Line",Desc);
+obj_exists("cbtn_Line",5);
+button_set("cbtn_Line",ON);
+button_press("btn_Release");
+
+# Logout
+set_window ("gcBody", 60);
+web_link_click("olink_Logout");
+
+# Close the browser
+win_activate ("Browser Main Window");
+win_close ("Browser Main Window");
+
+return E_OK;
+}
+
+
+##############################
+# (3) MO_AddLine
+##############################
+# Used by MO modules only for: Login through adding one line to a blank quote or order
+function MO_AddLine (in QuoteOrder,
+					 in Username,
+				     in Password,
+					 in ICN,
+				     in PartNumber,
+					 in Quantity,
+					 in MLI,
+					 in ShipDate,
+					 in Customer,
+					 in FirmSimilar)
+{
+# Declare variables
+static MO_GUI_Map,RowCount,Go_Num,Desc,i,Date,CellValue,rc,LoopStart;
+
+# Login
+rc = GC_Login(Username,Password,"GC");
+if (rc != E_OK)
+	{tl_step("Login Check",FAIL,"The application did not initiate correctly.");
+	 return E_GENERAL_ERROR;
+	}
+	
+# Load the GUI Map
+MO_GUI_Map = TEST_PATH & "GuiMaps\\GC_MO.gui";
+GUI_unload_all();
+GUI_close_all();
+rc = GUI_load(MO_GUI_Map);
+if (rc != E_OK)
+	{tl_step("GUI Map Check",FAIL,"The gui map did not load correctly. RC = " & rc);
+	 return E_GENERAL_ERROR;
+	}
+
+# Look at the assigned queue
+if (QuoteOrder == "Quote")
+	{# ITO queue
+	 set_window ("GE Power Systems", 60);
+	 web_link_click("olink_View_My_Assigned_Quote_Queue");
+	}
+else if (QuoteOrder == "Order")
+	{# OTR queue
+	 set_window ("GE Power Systems", 60);
+	 web_link_click("olink_View_My_Assigned_Order_Queue");
+	}
+
+# Check if Show All link exists
+set_window("GE Power Systems",60);
+if (obj_exists("olink_Show_All",1) == E_OK)
+	{web_link_click("olink_Show_All");
+	 LoopStart = 3;
+	}
+else
+	LoopStart = 2;
+
+# Determine the number of rows that are in the queue
+set_window ("GE Power Systems", 60);
+tbl_get_rows_count("otable_Queue",RowCount);
+
+# Loop through the rows to select the proper ICN 
+for (i=LoopStart;i<=RowCount;i++)
+	{tbl_get_cell_data("otable_Queue",i,"#2",CellValue);
+	 if (CellValue == ICN)
+	 	{Go_Num = i-LoopStart;
+		 Desc = "{class: \"object\", MSW_class: \"html_rect\", html_name: \"Go!\", location: \""&Go_Num&"\"}";
+	 	 GUI_add("","GE Power Systems","olink_Go!",Desc);
+	 	 set_window ("GE Power Systems", 1);
+	 	 web_image_click("olink_Go!", 9, 9);
+	 	 i=RowCount+1;
+		}
+	 if (i == RowCount)
+	 	{tl_step("ICN Search Check",FAIL,"The ICN was not found. ICN " & ICN);
+		 return E_GENERAL_ERROR;
+		}
+	}
+
+# Add Line
+set_window ("gcBody", 60);
+obj_exists("btn_AddLine",5);
+button_press("btn_AddLine");
+
+# Enter Line Details - Part Number, Quantity, MLI, Customer, F/S
+rc = set_window ("Enter Line Details", 30);
+if (rc != E_OK)
+	{tl_step("Enter Line Details Screen Check",FAIL,"The screen did not display. RC = " & rc);
+	 return E_GENERAL_ERROR;
+	}
+else
+	tl_step("Enter Line Details Screen Check",PASS,"The screen displayed correctly.");
+
+# Enter the Part Number
+rc = edit_set("edit_PartNumber",PartNumber);
+if (rc != E_OK)
+	{tl_step("Part Number Check",FAIL,"The part number was not entered. RC = " & rc & ". The part number was" & PartNumber);
+	 return E_GENERAL_ERROR;
+	}
+else
+	tl_step("Part Number Check",PASS,"The edit field was found and data was entered successfully.");
+
+# Enter the Quantity
+rc = edit_set("edit_Quantity",Quantity);
+if (rc != E_OK)
+	{tl_step("Quantity Check",FAIL,"The quantity was not entered. RC = " & rc & ". The quantity was" & Quantity);
+	 return E_GENERAL_ERROR;
+	}
+else
+	tl_step("Quantity Check",PASS,"The edit field was found and data was entered successfully.");
+
+# Enter the MLI - Optional Field
+rc = edit_set("edit_MLI",MLI);
+if (rc != E_OK)
+	{tl_step("MLI Check",FAIL,"The MLI was not entered. RC = " & rc & ". The MLI was" & MLI);
+	 return E_GENERAL_ERROR;
+	}
+else
+	tl_step("MLI Check",PASS,"The edit field was found and data was entered successfully.");
+
+# Modify the ship date if necessary
+if (ShipDate != 0)
+	{Date = GC_Get_Date(ShipDate);
+	 edit_set_insert_pos ("edit_ShipDate", 0, 0);
+	 obj_type("edit_ShipDate","<kS_End_E>");
+	 obj_type("edit_ShipDate",Date);
+	 obj_type("edit_ShipDate","<kTab>");
+	 # No permission to modify ship date
+	 if (win_exists("Microsoft Internet Explorer",5) == E_OK)
+		{set_window ("Microsoft Internet Explorer", 1);
+		 button_press ("OK");
+		 tl_step("Ship Date Permissions Check",FAIL,"Not allowed to modify the ship date.");
+		 # Option Continue With Today's Date
+		 set_window ("GE Power Systems", 30);
+		 button_press("btn_ContinueWithTodaysDate");
+		}
+	 else
+		tl_step("Ship Date Permissions Check",PASS,"Allowed to modify the ship date.");
+	}
+
+# Enter Customer
+set_window ("Enter Line Details", 30);
+edit_set("edit_Customer",Customer);
+if (rc != E_OK)
+	{tl_step("Customer Check",FAIL,"The MLI was not entered. RC = " & rc & ". The Customer was" & Customer);
+	 return E_GENERAL_ERROR;
+	}
+else
+	tl_step("Customer Check",PASS,"The edit field was found and data was entered successfully.");
+
+# Enter Firm or Similar
+if (QuoteOrder == "Quote")
+	{set_window ("Enter Line Details", 30);
+	 if (FirmSimilar == "Similar")
+		button_set("rbtn_SimilarTo",ON);
+	 else
+		button_set("rbtn_Firm",ON);
+	}
+
+# Press the Add button
+set_window ("Enter Line Details", 1);
+button_press("btn_Add");
+
+# Basic check of the Part Number to verify addition
+set_window ("gcBody", 60);
+obj_exists("otable_lines",5);
+tbl_get_cell_data("otable_lines","#2","#3",CellValue);
+if (CellValue == PartNumber)
+	tl_step("Part Number Check",PASS,"The Part Number was displayed correctly.");
+else
+	tl_step("Part Number Check",FAIL,"The Part Number was displayed incorrectly. PN " & CellValue);
+
+return E_OK;
+}
+
+##############################
+# (4) MO_CrudNote
+#assumed starting point is material order screen with ICNs assigned to user
+##############################
+# Function for adding, modifying, deleting or viewing history of note attachment on MO
+function MO_CrudNote (in notetype,
+				      in noteaction)
+{
+auto mycounter;		#used as loop counter before breaking
+auto notesline;		#var for the line that will have note (ICN...Part# string)
+auto whichline;		#which row of lines table
+auto partnum;		#partnumber for line with note
+auto nameresult;	#captured value of author on note
+auto dateresult;	#captured value of date on note
+auto actionresult;	#captured value of last action on note
+auto textresult;	#captured value of note
+auto statusresult;	#captured value of note status
+auto lastrow;		#last row of history
+auto action1;		#history result
+auto action2;		#history result
+auto status1;		#history result
+auto status2;		#history result
+auto mysubject;		#email subject variable
+auto myerror;		#holds error message
+auto editdata;		#timestamped string for edit
+auto timenow;		#timestamped subject of email
+auto mydebug;		#captures failing variables
+auto rc;			#dummy
+
+auto myemail="kevin5.martin@ps.ge.com";		#email to (my email) for notes 
+auto notedata="my text string for testing";	#text string used in the Add and Modify cases
+auto mydelay=60;	#parameterizing web_sync 
+auto note_error=0;	#manages if an error is detected if > 0
+
+#Verifying proper parameter values
+	
+switch (notetype){
+	case "Engineering":
+		report_msg("Engineering Note");
+		break;
+	case "GE":
+		report_msg("GE Note");
+		break;
+	case "Customer":
+		report_msg("External Customer Note");
+		break;
+	case "Item":
+		report_msg("no support for Customer Item or GE Item");
+		break;
+	default:
+		report_msg("notetype parameter not recognized: must be one of Engineering, GE, Customer");
+		return 10006;
+}		
+
+switch (noteaction){
+	case "Add":
+		report_msg("Adding Note");
+		break;
+	case "Modify":
+		report_msg("Modifying Note");
+		break;
+	case "Delete":
+		report_msg("Deleting Note");
+		break;
+	case "View":
+		report_msg("Viewing Note");
+		break;
+	default:
+		report_msg("notetype parameter not recognized: must be one of Add, Modify, View, Delete");
+		return 10006;
+}	
+
+#reload only the necessary GUI file
+GUI_unload_all();
+GUI_close_all();
+rc = GUI_load(TEST_PATH & "GuiMaps\\GC_MO.gui");
+if (rc != E_OK)
+	{
+	tl_step("GUI Map Check",FAIL,"The gui map did not load correctly. RC = " & rc);
+	return("E_GENERAL_ERROR");
+	}
+
+#is a line ready (required for proper use of this function)	
+set_window("gcBody",1);
+web_sync(mydelay);
+tbl_get_rows_count("otable_lines", whichline );
+if(whichline < 3)
+	{
+	report_msg("no line exists?");
+	return("E_GENERAL_ERROR");
+	}
+	
+#capture part number to verify proper line has the note
+tbl_get_cell_data("otable_lines","#3","#3",partnum);
+	
+	#always act on first line--future growth area here:
+	#	a param could indicate which line to use for the note
+	#	requires more TSL to manage which GUI object is clicked
+	
+#go to the notes screen by clicking on attachment icon
+set_window("gcBody",1);
+if(noteaction == "Add")
+	{
+	if(obj_exists("btn_20_nonote") != E_OK)
+		{
+		if(obj_exists("btn_note_none_line1") != E_OK)
+			{
+			report_msg("adding attachment to a line with existing attachment");
+			if(obj_exists("btn_20_attached") != E_OK)
+				{
+				if(obj_exists("btn_note_attached_line1") != E_OK)
+					{
+					report_msg("problems finding the line for the attachment");
+					return("E_GENERAL_ERROR");
+					}
+				else
+					{#using GUI object for the >1 line w attachment case
+					report_msg("using 'line1' with attachment");
+					set_window("gcBody",1);
+					web_image_click("btn_note_attached_line1", 10, 13);
+					web_sync(mydelay);
+					}
+				}
+			else
+				{#using GUI object for the "only 1" line w attachment case (2nd add?)
+				report_msg("using 'first line' with attachment");
+				set_window("gcBody",1);
+				web_image_click("btn_20_attached", 10, 13);
+				web_sync(mydelay);
+				}
+			}
+			else
+				{#using line 1 GUI object for >1 line case
+				report_msg("using 'line1' w none attached"); 
+				set_window("gcBody",1);
+				web_image_click("btn_note_none_line1", 10, 13);
+				web_sync(mydelay);
+				}
+			}
+	else
+		{#using line 1 GUI object for the "only 1" line case--expected on first add
+		report_msg("using 'first line' w none attached");
+		set_window("gcBody",1);
+		web_image_click("btn_20_nonote", 10, 13);
+		web_sync(mydelay);
+		}
+	}
+else{#noteaction = Modify, Delete or View -- then must select "attached" GUI object
+	if(obj_exists("btn_20_attached") != E_OK)
+		{
+		if(obj_exists("btn_note_attached_line1") != E_OK)
+			{
+			report_msg("problems finding the line with attachment");
+			return("E_GENERAL_ERROR");
+			}
+		else
+			{#using GUI object for the >1 line case
+			report_msg("using 'line1' attachment"); 
+			set_window("gcBody",1);
+			web_image_click("btn_note_attached_line1", 10, 13);
+			web_sync(mydelay);
+			}
+		}
+	else
+		{#using GUI object for the "only 1" line case -- expected
+		report_msg("using 'firstline' attachment");
+		set_window("gcBody",1);
+		web_image_click("btn_20_attached", 10, 13);
+		web_sync(mydelay);
+		}
+	}
+
+#verify navigation to notes frame succeeded
+set_window("notes",15);
+tbl_get_cell_data("otable_notesfor","#1","#1",notesline);
+if(match(notesline,partnum)<1)#wrong line for note if same part num not found
+	{
+	report_msg("notes are for " & notesline & " , not as expected for part " & partnum);
+	return("E_GENERAL_ERROR");
+	}
+else{
+	report_msg("using note on line: " & notesline);
+	}
+	
+#open the proper note tab type
+set_window("notes",15);
+switch(notetype)#is this note to be type Engineering, GE or Customer
+	{
+	case"Engineering":
+		web_link_click("olink_tab_engineering");
+		break;
+	case"GE":
+		web_link_click("olink_tab_GE");
+		break;
+	case"Customer":
+		web_link_click("olink_tab_customer");
+		break;
+	default:#item types not yet supported
+		report_msg("unknown desired note type: " & notetype);
+		note_error++;
+		return("E_GENERAL_ERROR");
+	}
+web_sync(mydelay);
+	
+#which action to perform
+set_window("notes",15);
+switch(noteaction)#is this note to be added, modified, deleted or viewed
+	{
+	case"Add":
+		button_press("btn_addnote");
+		web_sync(mydelay);
+		set_window("addnote",12);
+		edit_set("edit_note",notedata);
+		button_press("btn_save");
+		web_sync(mydelay);
+		report_msg("add action saved");
+		break;
+		
+	case"Modify":
+		if(obj_exists("checkbox_GCE") != E_OK)
+			{
+			report_msg("no attachment to modify");
+			return("E_GENERAL_ERROR");
+			}
+		tbl_get_cell_data("otable_notes","#2","#6",statusresult);
+		if(compare_text(statusresult,"Deleted") == 1)
+			{
+			report_msg("invalid action: can not modify a deleted note");
+			return("E_GENERAL_ERROR");
+			}
+		button_set("checkbox_GCE",ON);
+		button_press("btn_modifynote");
+		set_window("modifynote",10);
+		editdata="edited " & get_time() & " " & notedata;
+		edit_set("edit_note",editdata);
+		obj_type("edit_note","<kTab>");
+		button_press("btn_save");	
+		report_msg("modify action saved");
+		break;
+
+	case"Delete":
+		if(obj_exists("checkbox_GCE") != E_OK)
+			{
+			report_msg("no attachment to delete");
+			return("E_GENERAL_ERROR");
+			}
+		tbl_get_cell_data("otable_notes","#2","#6",statusresult);
+		if(compare_text(statusresult,"Deleted") == 1)
+			{
+			report_msg("invalid action: can not delete a deleted note");
+			return("E_GENERAL_ERROR");
+			}
+		button_set("checkbox_GCE",ON);
+		button_press("btn_deletenote");
+		set_window("deletenote",9);
+		button_press("btn_delete");
+		report_msg("delete action confirmed");
+		break;
+
+	case"View":
+			set_window("notes",15);
+			if(obj_exists("checkbox_GCE") != E_OK)
+				{
+				report_msg("no attachment to view");
+				return("E_GENERAL_ERROR");
+				}
+			tbl_get_cell_data("otable_notes","#2","#6",statusresult);
+			if(compare_text(statusresult,"Deleted") == 0)
+				{
+				report_msg("invalid action: can only view a deleted note");
+				return("E_GENERAL_ERROR");
+				}
+			button_set("checkbox_GCE",ON);
+			button_press("btn_viewnotehistory");
+			web_sync(mydelay);
+			set_window("GE Power Systems",11);
+			tbl_get_rows_count("otable_note_history",lastrow);
+			tbl_get_cell_data("otable_note_history","#3","#2",action1);
+			tbl_get_cell_data("otable_note_history",lastrow,"#2",action2);
+			tbl_get_cell_data("otable_note_history","#3","#5",status1);
+			tbl_get_cell_data("otable_note_history",lastrow,"#5",status2);
+			button_press("btn_close_notehistory");
+			report_msg("installment history reviewed");
+			break;
+
+		default:#unsupported action
+			report_msg("unknown desired note action: " & noteaction);
+			note_error++;
+		}
+
+#handling error
+if(win_exists("GC_error_note") == E_OK)
+	{
+	set_window("GC_error_note",1);
+	win_get_text("GC_error_note",myerror,0,110,600,200);
+	report_msg(myerror);
+	web_link_click("olink_Back");
+	web_sync(mydelay);
+	}
+
+#evaluating results
+if(noteaction != "View")
+	{
+	set_window("notes",15);
+	tbl_get_cell_data("otable_notes","#2","#2",nameresult);
+	tbl_get_cell_data("otable_notes","#2","#3",actionresult);
+	tbl_get_cell_data("otable_notes","#2","#4",dateresult);
+	tbl_get_cell_data("otable_notes","#2","#5",textresult);
+	tbl_get_cell_data("otable_notes","#2","#6",statusresult);
+	if(match(nameresult,"[A-Z]")<1)
+		{#name is not listed
+		note_error++;
+		mydebug=mydebug &  " " & nameresult;
+		}
+	if(match(dateresult,"[0-9]")<1)
+		{#date is not numeric--could be more sophisticated
+		note_error++;
+		mydebug=mydebug & " " & dateresult;
+		}
+	if(noteaction=="Add")
+		{
+		if(compare_text(actionresult,"Created")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & actionresult;
+			}
+		if(compare_text(statusresult,"Active")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & statusresult;
+			}
+		if(compare_text(textresult,notedata)== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & notedata;
+			}
+		}
+	if(noteaction=="Modify")
+		{
+		if(compare_text(actionresult,"Modified")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & actionresult;
+			}
+		if(compare_text(statusresult,"Modified")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & statusresult;
+			}
+		if(compare_text(textresult,editdata)== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & editdata;
+			}
+		}	
+	if(noteaction=="Delete")
+		{
+		if(compare_text(actionresult,"Deleted")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & actionresult;
+			}
+		if(compare_text(statusresult,"Deleted")== 0) 
+			{
+			note_error++;
+			mydebug=mydebug & " " & statusresult;
+			}
+		if(match(textresult,"[A-Z]") > 0){#text is not null
+			note_error++;
+			mydebug=mydebug & " " & textresult;
+			}
+		}		
+	}#end of test verifications for Add, Modify, Delete			
+else
+	{#for view verifications, where the first is always created/active and last is always deleted/deleted
+	if(compare_text(action1,"Created") == 0)
+		{
+		note_error++;
+		mydebug=mydebug & " " & action1;
+		}
+	if(compare_text(status1,"Active") == 0)
+		{
+		note_error++;
+		mydebug=mydebug & " " & status1;
+		}		
+	if(compare_text(action2,"Deleted") == 0)
+		{
+		note_error++;
+		mydebug=mydebug & " " & action2;
+		}
+	if(compare_text(status2,"Deleted") == 0)
+		{
+		note_error++;
+		mydebug=mydebug & " " & status2;
+		}
+	if(note_error > 0)
+		{
+		report_msg("debugging viewhistory: " & action1 & status1 & " " & action2 & status2);
+		}	
+	}
+#reporting result
+	if(note_error > 0)
+		{
+		report_msg("found " & note_error & " notes error(s) on : " & notesline);
+		report_msg("captured: " & nameresult & " " & actionresult & " " & textresult & " " & statusresult);
+		report_msg("debug data: " & mydebug);
+		tl_step("CRUD Note Attachment",FAIL,notetype & " " & noteaction & " has " & note_error & " errors");
+		}
+	else
+		{
+		report_msg("note action passed at: " & notesline);
+		tl_step("CRUD Note Attachment",PASS,notetype & " " & noteaction);
+		}
+#returning to material order/quote
+wait(1);
+set_window("notes",6);
+web_link_click("olink_return");
+web_sync(mydelay);
+	
+if(win_exists("GE Power Systems")== E_OK)#email is sent if line has released status
+	{
+	set_window("GE Power Systems",50);
+	edit_set("edit_noteemail_to",myemail);
+	edit_get_text("edit_noteemail_subject",mysubject);
+	timenow=mysubject & get_time();
+	edit_set("edit_noteemail_subject",timenow );
+	report_msg("emailed " & myemail & " with subject " & timenow);
+	edit_get_text("edit_noteemail_body",textresult);
+	if(match(textresult,noteaction) > 0)
+		{
+		button_press("btn_send");
+		web_sync(mydelay);
+		set_window("GE Power Systems",51);
+		win_get_text("GE Power Systems",textresult);
+		if(match(textresult,"successfully")>0)
+			{
+			button_press("btn_OK");	
+			tl_step("Note Emailed",PASS,notetype & " " & noteaction & " " & timenow);
+			}
+		}
+	else
+		{
+		tl_step("Note Emailed",FAIL,notetype & " " & noteaction & " " & timenow);
+		return("E_GENERAL_ERROR email" & textresult & " " & noteaction);
+		}
+	}
+set_window("gcBody",1);
+web_sync(mydelay);
+	
+report_msg("completed " & noteaction & " action on note type " & notetype);
+
+if(note_error > 0)
+	{
+	report_msg("completed with errors detected" & mydebug);
+	return("E_GENERAL_ERROR");
+	}
+}
+
+##############################
+# (5) MO_ExplodeLine
+#assumed starting point is material order screen with ICNs assigned to user
+##############################
+function MO_ExplodeLine (in explodeoption,
+				      in line)
+{
+auto mycounter;		#used as loop counter before breaking
+auto whichline;		#which row of lines table
+auto exploderesult;	#captured value of author on note
+auto statusresult;	#captured value of note status
+auto lastrow;		#last row of history
+auto myerror;		#holds error message
+auto mydebug;		#captures failing variables
+auto rc;			#dummy
+auto explodeline;	#int for the line param
+auto selectline;    #the line's checkbox location to be selected ("T" version - 1) 
+auto desc;
+auto processing;	#the processing status of explode ("done" or "ongoing")
+auto partnum;
+auto resultingparts;
+auto message;
+auto sameline;
+
+auto i;
+
+auto mydelay=60;	#parameterizing web_sync 
+auto exp_error=0;	#manages if an error is detected if > 0
+
+#Verifying proper parameter values
+	
+switch (explodeoption){
+	case "Release":
+		report_msg("Engineering Note");
+		break;
+	case "Select":
+		report_msg("GE Note");
+		break;
+	default:
+		report_msg("explodeoption parameter not recognized: must be either Release or Select");
+		return 10006;
+}		
+
+switch (line){
+	case "1":
+		explodeline=1;
+		report_msg("Exploding line T1.0");
+		break;
+	case "2":
+		explodeline=2;
+		report_msg("Exploding line T2.0");
+		break;
+	case "3":
+		explodeline=3;
+		report_msg("Exploding line T3.0");
+		break;
+	case "4":
+		explodeline=4;
+		report_msg("Exploding line T4.0");
+		break;
+	default:
+		report_msg("line parameter not recognized: must be line 1, 2, 3 or 4 (used in T1.0, T2.0, T3.0, T4.0)");
+		return 10006;
+}	
+
+#reload only the necessary GUI file
+GUI_unload_all();
+GUI_close_all();
+rc = GUI_load(TEST_PATH & "GuiMaps\\GC_MO.gui");
+if (rc != E_OK)
+	{
+	tl_step("GUI Map Check",FAIL,"The gui map did not load correctly. RC = " & rc);
+	return("E_GENERAL_ERROR");
+	}
+
+#is a line ready (required for proper use of this function)	
+set_window("gcBody",1);
+web_sync(mydelay);
+tbl_get_rows_count("otable_lines", whichline );
+if(whichline < (explodeline + 2))
+	{
+	report_msg("insufficient lines exist?");
+	return("E_GENERAL_ERROR");
+	}
+	
+#capture explodable part number 
+#tbl_get_cell_data("otable_lines","#3","#3",partnum); #first line 
+tbl_get_cell_data("otable_lines","#" & line & "","#3",partnum);
+	
+# a mystery object in gui map, is hardcoded to a part value and illogical version:
+# class: check_button,
+#  MSW_class: html_check_button,
+#  html_name: CB,
+#  part_value: "26621.6665.29473.40581|TEST|B"
+# 
+
+# Create GUI object for target line to be exploded
+selectline=explodeline - 1;
+desc = "{class: \"check_button\", MSW_class: \"html_check_button\", html_name: \"CB\", location: \""& selectline &"\"}";
+GUI_add("","gcBody","explodeCB",desc);
+
+#select line and click on explode button
+set_window("gcBody",1);
+obj_exists("explodeCB",5);
+button_set("explodeCB",ON);
+button_press("btn_Explode");
+web_sync(mydelay);
+
+GUI_delete("","gcBody","explodeCB" );
+
+
+
+#verify navigation to explode options succeeded
+set_window("GE Power Systems",15);
+obj_exists("rbtn_ExplodeReleaseOption",5);
+obj_exists("rbtn_ExplodeSelectOption",5);
+obj_exists("rbtn_CancelExplode",5);
+
+#which option to perform
+set_window("GE Power Systems",15);
+switch(explodeoption)
+	{
+	case"Release":
+		button_set("rbtn_ExplodeOption_1",ON);#button label is for Explode and Release
+		button_press("btn_Go");
+		report_msg("explode and release chosen");
+		web_sync(mydelay);
+		#confirming orderable child prompt
+		set_window ("Microsoft Internet Explorer", 2);
+		button_press ("btn_OK");
+		break;
+		
+	case"Select":
+		button_set("rbtn_ExplodeOption_2",ON);#button label is for Explode and Select
+		button_press("btn_Go");
+		report_msg("explode and select chosen");
+		break;
+
+	default:#unsupported action
+			report_msg("unknown explode note action: " & explodeoption);
+			exp_error++;
+		}
+		
+processing="ongoing";
+while(processing != "done")	#handling possible behaviors for part type and response time
+
+	{
+	set_window("GE Power Systems",122);
+	win_get_text("GE Power Systems",message,0,50,600,100);
+	
+	#timeout
+	if(match(message,"timed out")>0)
+		{
+		set_window("GE Power Systems",122);
+		button_set("rbtn_ExplodeOption_1",ON);#button label is retry explode
+		button_press("btn_Go");
+		}
+		
+	if(match(message,"type 9")>0)#speculative regarding message content
+		{
+		set_window("GE Power Systems",122);
+		button_set("rbtn_ExplodeOption_1",ON);#button label is ...confirm a non type 9 item is ok
+		button_press("btn_Go");
+		}
+	
+	if(match(message,"superceded")>0)#speculative regarding message content
+		{
+		set_window("GE Power Systems",122);
+		button_set("rbtn_ExplodeOption_1",ON);#button label is ...use superceded part
+		button_press("btn_Go");
+		#confirming orderable child prompt
+		set_window ("Microsoft Internet Explorer", 2);
+		button_press ("btn_OK");
+		}
+		
+	#superceded child parts
+	
+	#others?
+	
+	#interim solution to uncertainty regarding when to break from loop
+	wait(15);
+	i++;
+	if(i>20)#5 minutes
+		{
+		processing = "done";
+		}
+	}
+	
+#scripting suspended while COPICS is down and out
+
+#evaluating results
+set_window("gcBody",1);
+tbl_get_rows_count("otable_lines", whichline );
+for(i=1;i<=whichline;i++)
+	{
+	tbl_get_cell_data("otable_lines","#" & i & "","#3",resultingparts);
+	tbl_get_cell_data("otable_lines","#" & i & "","#1",sameline);
+	if(match(resultingparts,partnum)>0)
+		{#part did not explode?
+		if(match(sameline,explodeline)>0)
+			{#same line has same unexploded part?
+			exp_error++;
+			mydebug=mydebug &  " " & partnum;
+			}
+		}
+	}
+
+if(explodeoption == "Select")
+	{
+	set_window("gcBody",1);
+	tbl_get_rows_count("otable_lines", whichline );
+	for(i=1;i<=whichline;i++)
+		{
+		tbl_get_cell_data("otable_lines","#" & i & "","#12",statusresult);
+		tbl_get_cell_data("otable_lines","#" & i & "","#3",resultingparts);
+		if(match(statusresult,"BD")>0)
+			{
+			report_msg("part " & resultingparts & "is in selected/build state");
+			}
+		else
+			{
+			report_msg("part " & resultingparts & "is NOT selected/build state");
+			}
+		}
+	}		
+
+if(explodeoption == "Release")
+	{
+	set_window("gcBody",1);
+	tbl_get_rows_count("otable_lines", whichline );
+	for(i=1;i<=whichline;i++)
+		{
+		tbl_get_cell_data("otable_lines","#" & i & "","#12",statusresult);
+		tbl_get_cell_data("otable_lines","#" & i & "","#3",resultingparts);
+		if(match(statusresult,"RD")>0)
+			{
+			report_msg("part " & resultingparts & "is in released state");
+			}
+		else
+			{
+			report_msg("part " & resultingparts & "is NOT released state");
+			}
+		}	
+	}
+	
+#reporting result
+	if(exp_error > 0)
+		{
+		report_msg("found " & exp_error & " error(s) on : " & line);
+		report_msg("debug data: " & mydebug);
+		tl_step("Explode Line",FAIL,"Explode and " & explodeoption & " at line " & line);
+		}
+	else
+		{
+		tl_step("Explode Line",PASS,"Explode and " & explodeoption & " succeeded for line " & line);
+		}
+
+if(exp_error > 0)
+	{
+	report_msg("completed with errors detected" & mydebug);
+	return("E_GENERAL_ERROR");
+	}
+}
